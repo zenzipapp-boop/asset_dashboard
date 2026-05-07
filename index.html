@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AssetTrack - IT Asset Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f7f5;
+            color: #222;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ─── SIDEBAR ─────────────────────────────────────────────────── */
+        .sidebar {
+            width: 160px;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 0;
+            flex-shrink: 0;
+            border-right: 1px solid #333;
+        }
+
+        .sidebar-header {
+            padding: 0 14px 14px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-brand {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .sidebar-tagline {
+            font-size: 10px;
+            color: #888;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            background: #222;
+        }
+
+        .nav-item.active {
+            background: #333;
+        }
+
+        .nav-icon {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            color: #888;
+        }
+
+        .nav-item.active .nav-icon {
+            color: #fff;
+        }
+
+        .nav-label {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.2;
+        }
+
+        .nav-item.active .nav-label {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .sidebar-footer {
+            padding: 0 14px;
+            border-top: 1px solid #333;
+            padding-top: 8px;
+        }
+
+        .sidebar-version {
+            font-size: 10px;
+            color: #555;
+            line-height: 1.2;
+        }
+
+        /* ─── MAIN CONTENT ────────────────────────────────────────────── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 12px 18px 8px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            background: #f7f7f5;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ─── STATS CARDS ─────────────────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            padding: 12px 18px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card {
+            border: 2px solid #222;
+            border-radius: 4px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        .stat-card.accent-1 {
+            background: #fff;
+        }
+
+        .stat-card.accent-2 {
+            background: #e8f5e9;
+        }
+
+        .stat-card.accent-3 {
+            background: #fffde7;
+        }
+
+        .stat-card.accent-4 {
+            background: #ffebee;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #222;
+            line-height: 1.2;
+        }
+
+        .stat-sub {
+            font-size: 10px;
+            color: #888;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        /* ─── CHARTS/PANELS ───────────────────────────────────────────── */
+        .charts-row {
+            display: flex;
+            gap: 10px;
+            padding: 0 18px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+
+        .chart-panel {
+            flex: 1;
+            min-width: 250px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 8px;
+        }
+
+        .panel-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .panel-item:last-child {
+            border-bottom: none;
+        }
+
+        .group-header-row td {
+            background: #f0f0f0;
+            font-weight: 700;
+            font-size: 11px;
+            padding: 5px 8px;
+            color: #444;
+            border-top: 2px solid #ccc;
+        }
+
+        .grouped-asset-row {
+            background: #f5f5f5 !important;
+            font-weight: 600;
+            border-top: 2px solid #ddd;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .grouped-asset-row:hover {
+            background: #eee !important;
+        }
+
+        tr[data-parent-group] {
+            background: #fafafa;
+            font-size: 10px;
+        }
+
+        tr[data-parent-group]:hover {
+            background: #f0f0f0;
+        }
+
+        tr[data-parent-group] td {
+            padding-left: 40px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .sort-btn {
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 3px 7px;
+            font-size: 11px;
+            cursor: pointer;
+            color: #444;
+        }
+
+        .sort-btn.active {
+            background: #222;
+            color: #fff;
+            border-color: #222;
+        }
+
+        /* ─── FORM ────────────────────────────────────────────────────── */
+        .form-container {
+            padding: 12px 18px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        input, select, textarea {
+            border: 2px solid #888;
+            border-radius: 3px;
+            padding: 3px 7px;
+            font-family: inherit;
+            font-size: 11px;
+            background: #fff;
+            color: #222;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #222;
+            box-shadow: 0 0 0 2px rgba(34, 34, 34, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* ─── BUTTONS ─────────────────────────────────────────────────── */
+        .btn {
+            border: 2px solid #222;
+            border-radius: 3px;
+            padding: 4px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            color: #222;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-primary {
+            background: #222;
+            color: #fff;
+            border-color: #222;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-danger {
+            border-color: #d32f2f;
+            color: #d32f2f;
+        }
+
+        .btn-danger:hover {
+            background: #ffebee;
+        }
+
+        .btn-small {
+            padding: 2px 8px;
+            font-size: 11px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* ─── TABLE ───────────────────────────────────────────────────── */
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 0 18px;
+            margin-bottom: 10px;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        th {
+            background: #f5f5f5;
+            padding: 6px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #222;
+            color: #222;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 5px 6px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border: 1.5px solid #666;
+        }
+
+        .badge-functional {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-color: #2e7d32;
+        }
+
+        .badge-non-functional {
+            background: #fffde7;
+            color: #f57f17;
+            border-color: #f57f17;
+        }
+
+        .badge-condemned {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #c62828;
+        }
+
+        /* ─── FILTER BAR ──────────────────────────────────────────────── */
+        .filter-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            padding: 8px 18px;
+            background: #fff;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .search-box {
+            position: relative;
+            grid-column: 1 / -1;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 3px 7px;
+        }
+
+        /* ─── PAGINATION ──────────────────────────────────────────────── */
+        .pagination {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            padding: 8px 18px;
+            border-top: 1px solid #ddd;
+        }
+
+        .pagination .btn {
+            min-width: 24px;
+            justify-content: center;
+        }
+
+        /* ─── MODAL ───────────────────────────────────────────────────── */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 4px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #222;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #222;
+        }
+
+        /* ─── ALERT ───────────────────────────────────────────────────── */
+        .alert {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            display: none;
+            font-size: 12px;
+        }
+
+        .alert.success {
+            background: #c8e6c9;
+            color: #2e7d32;
+            display: block;
+        }
+
+        .alert.error {
+            background: #ffcdd2;
+            color: #c62828;
+            display: block;
+        }
+
+        /* ─── RESPONSIVE ──────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 44px;
+                padding: 10px 0;
+            }
+
+            .sidebar-header {
+                padding: 0 8px 10px;
+                text-align: center;
+            }
+
+            .sidebar-brand {
+                font-size: 12px;
+            }
+
+            .sidebar-tagline {
+                display: none;
+            }
+
+            .nav-label {
+                display: none;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-row {
+                flex-direction: column;
+            }
+
+            .chart-panel {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">AssetTrack</div>
+                <div class="sidebar-tagline">IT Management</div>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('assets')">
+                    <span class="nav-icon">📫</span>
+                    <span class="nav-label">All Assets</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('add')">
+                    <span class="nav-icon">+</span>
+                    <span class="nav-label">Add Asset</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('maintenance')">
+                    <span class="nav-icon">🔧</span>
+                    <span class="nav-label">Maintenance</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('export')">
+                    <span class="nav-icon">📥</span>
+                    <span class="nav-label">Export</span>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="sidebar-version">v2.1 · IT Dept</div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main">
+            <!-- DASHBOARD -->
+            <div id="dashboard" class="content-section active">
+                <div class="header">
+                    <div class="header-title">Dashboard</div>
+                    <div class="header-controls">
+                        <input type="text" placeholder="Search assets…" style="width: 160px;">
+                        <button class="btn btn-primary btn-small" onclick="switchTab('add')">+ Add Asset</button>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card accent-1">
+                            <div class="stat-value" id="total-assets">0</div>
+                            <div class="stat-label">Total Assets</div>
+                            <div class="stat-sub">across all depts</div>
+                        </div>
+                        <div class="stat-card accent-2">
+                            <div class="stat-value" id="functional-count">0</div>
+                            <div class="stat-label">Functional</div>
+                            <div class="stat-sub" id="functional-pct">0% of total</div>
+                        </div>
+                        <div class="stat-card accent-3">
+                            <div class="stat-value" id="non-functional-count">0</div>
+                            <div class="stat-label">Non-Functional</div>
+                            <div class="stat-sub">needs attention</div>
+                        </div>
+                        <div class="stat-card accent-4">
+                            <div class="stat-value" id="condemned-count">0</div>
+                            <div class="stat-label">Condemned</div>
+                            <div class="stat-sub">for disposal</div>
+                        </div>
+                    </div>
+                    <div class="charts-row">
+                        <div class="chart-panel">
+                            <div class="panel-title">Assets by Type</div>
+                            <canvas id="type-chart"></canvas>
+                            <div id="type-list" style="margin-top: 10px;"></div>
+                        </div>
+                        <div class="chart-panel">
+                            <div class="panel-title">By Location</div>
+                            <canvas id="location-chart"></canvas>
+                            <div id="location-list" style="margin-top: 10px;"></div>
+                        </div>
+                        <div class="chart-panel">
+                            <div class="panel-title">Recent Activity</div>
+                            <div id="activity-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALL ASSETS -->
+            <div id="assets" class="content-section">
+                <div class="header">
+                    <div class="header-title">All Assets</div>
+                    <div class="header-controls">
+                        <button class="btn btn-primary btn-small" onclick="exportToExcel()">Export</button>
+                    </div>
+                </div>
+                <div id="assets-alert" class="alert"></div>
+                <div class="filter-group">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search by asset name or serial number…">
+                    </div>
+                    <select id="filterStatus" onchange="loadAssets()" style="padding: 3px 7px;">
+                        <option value="">All Status</option>
+                        <option value="Functional">Functional</option>
+                        <option value="Non-Functional">Non-Functional</option>
+                        <option value="Condemned">Condemned</option>
+                    </select>
+                    <select id="filterType" onchange="loadAssets()" style="padding: 3px 7px;">
+                        <option value="">All Types</option>
+                    </select>
+                    <select id="filterLocation" onchange="loadAssets()" style="padding: 3px 7px;">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; padding: 6px 18px; background:#fff; border-bottom:1px solid #ddd; flex-wrap:wrap;">
+                    <span style="font-size:11px; color:#666; font-weight:600;">Sort:</span>
+                    <select id="sortBy" onchange="loadAssets()" style="padding: 3px 7px; font-size:11px;">
+                        <option value="sl_no">Sl No</option>
+                        <option value="asset_name">Asset Name</option>
+                        <option value="dop">Date Purchased</option>
+                        <option value="asset_type">Type</option>
+                        <option value="status">Status</option>
+                        <option value="value">Value</option>
+                        <option value="location">Location</option>
+                        <option value="department">Department</option>
+                    </select>
+                    <button id="sortDirBtn" class="sort-btn" onclick="toggleSortDir()">▲ Asc</button>
+                    <span style="font-size:11px; color:#666; font-weight:600; margin-left:8px;">Group by:</span>
+                    <select id="groupBy" onchange="loadAssets()" style="padding: 3px 7px; font-size:11px;">
+                        <option value="">None</option>
+                        <option value="asset_type">Type</option>
+                        <option value="location">Location</option>
+                        <option value="department">Department</option>
+                        <option value="status">Status</option>
+                        <option value="vendor">Vendor</option>
+                    </select>
+                </div>
+                <div class="content" id="assetsContent">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sl No</th>
+                                    <th>Asset Name</th>
+                                    <th>Date Purchased</th>
+                                    <th>Serial Number</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Vendor</th>
+                                    <th>Location</th>
+                                    <th>Value (₹)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assetsList"></tbody>
+                        </table>
+                    </div>
+                    <div id="scrollLoader" style="display: none; text-align: center; padding: 10px; font-size: 11px; color: #888;">Loading…</div>
+                    <div style="padding: 4px 18px; font-size: 11px; color: #888;" id="pageInfo"></div>
+                </div>
+            </div>
+
+            <!-- ADD ASSET -->
+            <div id="add" class="content-section">
+                <div class="header">
+                    <div class="header-title">Add New Asset</div>
+                </div>
+                <div class="content">
+                    <div class="form-container">
+                        <div id="entry-alert" class="alert"></div>
+                        <form id="assetForm">
+                            <div class="form-grid">
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                                        <input type="checkbox" id="disposedToggle" name="disposed" onchange="toggleDisposedFields()">
+                                        <span>Disposed</span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>Asset Name *</label>
+                                    <input type="text" name="asset_name" id="asset_name_input" list="asset_names_list" required placeholder="e.g. HP Probook 440 G5">
+                                    <datalist id="asset_names_list"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Type of Asset *</label>
+                                    <input type="text" name="asset_type" id="asset_type_input" list="asset_types_list" required placeholder="Select type or enter new...">
+                                    <datalist id="asset_types_list"></datalist>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Serial Numbers (SI No) *</label>
+                                    <input type="hidden" id="serialNumbersValue" name="si_no" required>
+                                    <div id="serialNumbersContainer" style="display: grid; gap: 8px;"></div>
+                                    <div style="font-size: 10px; color: #888; margin-top: 6px;">Enter one serial number for each unit. The list expands automatically when quantity changes.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Date of Purchase (D.O.P)</label>
+                                    <input type="text" id="dop_input" name="dop" placeholder="DD/MM/YYYY" oninput="updateAssetAge()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Quantity</label>
+                                    <input type="number" id="quantity_input" name="quantity" value="1" min="1" oninput="calculateTotalValue(); renderSerialInputs()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Price Per Unit (₹)</label>
+                                    <input type="number" id="price_per_unit" name="price_per_unit" step="0.01" placeholder="Unit price" oninput="calculateTotalValue()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Age of Asset</label>
+                                    <input type="text" id="age_input" name="age" readonly placeholder="Auto-calculated">
+                                </div>
+                                <div class="form-group">
+                                    <label>Vendor</label>
+                                    <input type="text" name="vendor" list="vendor_options" placeholder="Select or type a new vendor...">
+                                    <datalist id="vendor_options"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" name="location" list="location_options" placeholder="Select or type a new location...">
+                                    <datalist id="location_options"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Department</label>
+                                    <input type="text" name="department" list="department_options" placeholder="Select or type a new department...">
+                                    <datalist id="department_options"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Purchased From</label>
+                                    <input type="text" name="purchased_from" list="purchased_from_options" placeholder="Select or type a new source...">
+                                    <datalist id="purchased_from_options"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select name="status" required>
+                                        <option value="Functional">Functional</option>
+                                        <option value="Non-Functional">Non-Functional</option>
+                                        <option value="Condemned">Condemned</option>
+                                    </select>
+                                </div>
+                                <div id="disposalFields" style="display:none; grid-column: 1 / -1; background:#f9f9f9; padding:16px; border:2px solid #ddd; border-radius:4px;">
+                                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;">
+                                        <div class="form-group">
+                                            <label>Date of Disposal</label>
+                                            <input type="text" id="disposal_date_input" name="disposal_date" placeholder="DD/MM/YYYY" oninput="updateAssetAge()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Disposal Reason</label>
+                                            <input type="text" name="disposal_reason" placeholder="Sold, scrapped, damaged, etc.">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GST SECTION -->
+                            <div style="background: #f9f9f9; padding: 16px; border: 2px solid #ddd; border-radius: 4px; margin: 20px 0;">
+                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                                    <input type="checkbox" id="gstApplicable" name="gst_applicable" onchange="toggleGST()">
+                                    <label style="margin: 0;">GST Applicable on Purchase</label>
+                                </div>
+
+                                <div id="gstSection" style="display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div class="form-group">
+                                        <label>GST Mode</label>
+                                        <select id="gstModeSelect" onchange="updateGstModeLabel(); calculateAddGST()">
+                                            <option value="percent">GST %</option>
+                                            <option value="amount">Flat GST Amount</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label id="gstValueLabel">GST Rate (%)</label>
+                                        <input type="number" id="gstValueInput" step="0.01" value="18" oninput="calculateAddGST()">
+                                    </div>
+                                    <div class="form-group" style="grid-column: 1 / -1;">
+                                        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                                            <input type="checkbox" id="gstInterstateToggle" onchange="calculateAddGST()">
+                                            <span>Inter-state supply (IGST)</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CGST</label>
+                                        <input type="text" id="cgstDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>SGST</label>
+                                        <input type="text" id="sgstDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>IGST</label>
+                                        <input type="text" id="igstDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Total GST</label>
+                                        <input type="text" id="gstAmountDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Total Value (₹)</label>
+                                        <input type="text" id="totalValueDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                </div>
+
+                                <div id="noGstSection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div class="form-group">
+                                        <label>Price Per Unit (₹)</label>
+                                        <input type="text" id="price_per_unit_display" placeholder="Unit price" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Total Purchase Value (₹)</label>
+                                        <input type="number" id="simpleValueInput" name="value" step="0.01" placeholder="Auto-calculated" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="button-group">
+                                <button type="reset" class="btn" onclick="resetGSTFields()">Clear</button>
+                                <button type="submit" class="btn btn-primary">Save Asset</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAINTENANCE -->
+            <div id="maintenance" class="content-section">
+                <div class="header">
+                    <div class="header-title">Maintenance Log</div>
+                    <div class="header-controls">
+                        <button class="btn btn-primary btn-small" onclick="openMaintenanceModal()">+ Log Entry</button>
+                    </div>
+                </div>
+                <div class="content" style="display: flex; overflow: hidden;">
+                    <!-- Left panel: Asset list -->
+                    <div style="width: 200px; border-right: 1px solid #ddd; overflow-y: auto; background: #f9f9f9;">
+                        <div id="assetList" style="display: flex; flex-direction: column;"></div>
+                    </div>
+                    <!-- Right panel: Maintenance entries -->
+                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                        <div id="maintenancePanel" style="flex: 1; overflow-y: auto; padding: 10px 18px;">
+                            <div style="text-align: center; color: #888; padding: 40px 20px;">Select an asset to view maintenance logs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXPORT -->
+            <div id="export" class="content-section">
+                <div class="header">
+                    <div class="header-title">Export Assets</div>
+                </div>
+                <div class="content">
+                    <div class="form-container">
+                        <div id="export-alert" class="alert"></div>
+                        <div style="background: #fff; padding: 20px; border: 2px solid #ddd; border-radius: 4px; margin-bottom: 20px;">
+                            <div style="font-size: 12px; font-weight: 700; color: #222; margin-bottom: 8px;">Export to Excel</div>
+                            <p style="margin: 10px 0 20px; color: #666; font-size: 11px;">Download all assets in a formatted Excel spreadsheet with styling and filters.</p>
+                            <button class="btn btn-primary" onclick="exportToExcel()">📥 Export to Excel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT ASSET MODAL -->
+    <div id="editModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-title">Edit Asset</div>
+            <form id="editForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                            <input type="checkbox" id="editDisposedToggle" name="disposed" onchange="toggleEditDisposedFields()">
+                            <span>Disposed</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Asset Name</label>
+                        <input type="text" name="asset_name" required>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Serial Number(s)</label>
+                        <textarea name="si_no" rows="3" required style="resize: vertical;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Purchase (D.O.P)</label>
+                        <input type="text" id="editDopInput" name="dop" placeholder="DD/MM/YYYY" oninput="updateEditAssetAge()">
+                    </div>
+                    <div class="form-group">
+                        <label>Age of Asset</label>
+                        <input type="text" id="editAgeInput" name="age" readonly placeholder="Auto-calculated">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" required>
+                            <option value="Functional">Functional</option>
+                            <option value="Non-Functional">Non-Functional</option>
+                            <option value="Condemned">Condemned</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" name="location" list="edit_location_options" placeholder="Select or type a new location...">
+                        <datalist id="edit_location_options"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <input type="text" name="department" list="edit_department_options" placeholder="Select or type a new department...">
+                        <datalist id="edit_department_options"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Asset Type</label>
+                        <input type="text" name="asset_type" list="edit_asset_types_options" placeholder="Select or type a new type...">
+                        <datalist id="edit_asset_types_options"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor</label>
+                        <input type="text" name="vendor" list="edit_vendor_options" placeholder="Select or type a new vendor...">
+                        <datalist id="edit_vendor_options"></datalist>
+                    </div>
+                    <div id="editDisposalFields" style="display:none; grid-column: 1 / -1; background:#f9f9f9; padding:16px; border:2px solid #ddd; border-radius:4px;">
+                        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;">
+                            <div class="form-group">
+                                <label>Date of Disposal</label>
+                                <input type="text" id="editDisposalDateInput" name="disposal_date" placeholder="DD/MM/YYYY" oninput="updateEditAssetAge()">
+                            </div>
+                            <div class="form-group">
+                                <label>Disposal Reason</label>
+                                <input type="text" name="disposal_reason" placeholder="Sold, scrapped, damaged, etc.">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GST SECTION IN EDIT -->
+                <div style="background: #f9f9f9; padding: 16px; border: 2px solid #ddd; border-radius: 4px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <input type="checkbox" id="editGstApplicable" name="gst_applicable" onchange="toggleEditGST()">
+                        <label style="margin: 0;">GST Applicable</label>
+                    </div>
+
+                    <div id="editGstSection" style="display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label>GST Mode</label>
+                            <select id="editGstModeSelect" onchange="updateEditGstModeLabel(); calculateEditGST()">
+                                <option value="percent">GST %</option>
+                                <option value="amount">Flat GST Amount</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="editGstValueLabel">GST Rate (%)</label>
+                            <input type="number" id="editGstValueInput" step="0.01" value="18" oninput="calculateEditGST()">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                                <input type="checkbox" id="editGstInterstateToggle" onchange="calculateEditGST()">
+                                <span>Inter-state supply (IGST)</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>CGST</label>
+                            <input type="text" id="editCgstDisplay" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>SGST</label>
+                            <input type="text" id="editSgstDisplay" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>IGST</label>
+                            <input type="text" id="editIgstDisplay" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Total GST</label>
+                            <input type="text" id="editGstAmountDisplay" name="gst_amount" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Total Value (₹)</label>
+                            <input type="text" id="editTotalValueDisplay" name="value" disabled>
+                        </div>
+                    </div>
+
+                    <div id="editNoGstSection">
+                        <div class="form-group">
+                            <label>Price Per Unit (₹)</label>
+                            <input type="number" id="editPricePerUnitInput" name="price_per_unit" step="0.01" oninput="calculateEditSimpleValue()">
+                        </div>
+                        <div class="form-group">
+                            <label>Total Purchase Value (₹)</label>
+                            <input type="number" id="editSimpleValueInput" name="value" step="0.01" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 16px;">
+                    <button type="button" class="btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAINTENANCE MODAL -->
+    <div id="maintenanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">Log Maintenance Entry</div>
+            <form id="maintenanceForm">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Asset *</label>
+                    <select id="maint_asset_id" name="asset_id" required style="width: 100%;">
+                        <option value="">Select asset...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Entry Type *</label>
+                    <select id="maint_entry_type" name="entry_type" required style="width: 100%;" onchange="toggleScrapValue()">
+                        <option value="">Select type...</option>
+                        <option value="Repair">Repair</option>
+                        <option value="Inspection">Inspection</option>
+                        <option value="Scheduled">Scheduled Check</option>
+                        <option value="Discarded">Discarded</option>
+                    </select>
+                </div>
+                <div id="scrapValueSection" class="form-group" style="margin-bottom: 12px; display: none;">
+                    <label>Scrap Value (₹)</label>
+                    <input type="number" id="scrap_value_input" name="scrap_value" step="0.01" placeholder="Enter scrap/disposal value if any" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Date (DD/MM/YYYY) *</label>
+                    <input type="text" name="date" placeholder="DD/MM/YYYY" required style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Technician *</label>
+                    <input type="text" name="technician" placeholder="Name" required style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Notes</label>
+                    <textarea name="notes" placeholder="Description of work..." style="width: 100%;">
+                    </textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Cost (₹)</label>
+                    <input type="number" name="cost" step="0.01" placeholder="0.00" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Status</label>
+                    <select name="status" style="width: 100%;">
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="btn" onclick="closeMaintenanceModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let currentSkip = 0;
+        let itemsPerPage = 50;
+        let assetsTotal = 0;
+        let assetsLoading = false;
+        let sortDir = 'asc';
+        let searchDebounce = null;
+        let currentEditId = null;
+        let currentEditQuantity = 1;
+        let selectedAssetId = null;
+        let allAssets = [];
+        let serialNumbers = [];
+        let siNotApplicable = false; // when true, SI for all required slots is 'NA'
+        let includeExtraMonitorSi = false; // quantity 1 can optionally keep one extra SI
+
+        function getRequiredSerialCount() {
+            const quantity = Math.max(1, parseInt(document.getElementById('quantity_input').value, 10) || 1);
+            return quantity + (quantity === 1 && includeExtraMonitorSi ? 1 : 0);
+        }
+
+        function summarizeSerials(siNoValue) {
+            const serials = String(siNoValue || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            if (!serials.length) return 'NA';
+            if (serials.length === 1) return serials[0];
+            return `${serials[0]} +${serials.length - 1}`;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.closest('.nav-item').classList.add('active');
+
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'assets') loadAssets();
+            if (tab === 'maintenance') loadMaintenanceAssets();
+        }
+
+        async function loadOptions() {
+            try {
+                const res = await fetch(`${API_URL}/options`);
+                const data = await res.json();
+
+                document.getElementById('asset_types_list').innerHTML = data.asset_types.map(t => `<option value="${t}"></option>`).join('');
+                document.getElementById('asset_names_list').innerHTML = data.asset_names.map(n => `<option value="${n}"></option>`).join('');
+                document.getElementById('vendor_options').innerHTML = data.vendors.map(v => `<option value="${v}"></option>`).join('');
+                document.getElementById('location_options').innerHTML = data.locations.map(l => `<option value="${l}"></option>`).join('');
+                document.getElementById('department_options').innerHTML = data.departments.map(d => `<option value="${d}"></option>`).join('');
+                document.getElementById('purchased_from_options').innerHTML = data.purchased_from.map(p => `<option value="${p}"></option>`).join('');
+
+                document.getElementById('edit_asset_types_options').innerHTML = data.asset_types.map(t => `<option value="${t}"></option>`).join('');
+                document.getElementById('edit_vendor_options').innerHTML = data.vendors.map(v => `<option value="${v}"></option>`).join('');
+                document.getElementById('edit_location_options').innerHTML = data.locations.map(l => `<option value="${l}"></option>`).join('');
+                document.getElementById('edit_department_options').innerHTML = data.departments.map(d => `<option value="${d}"></option>`).join('');
+
+                document.getElementById('filterType').innerHTML = '<option value="">All Types</option>' + data.asset_types.map(t => `<option value="${t}">${t}</option>`).join('');
+                document.getElementById('filterLocation').innerHTML = '<option value="">All Locations</option>' + data.locations.map(l => `<option value="${l}">${l}</option>`).join('');
+            } catch (err) {
+                console.error('Error loading options:', err);
+            }
+        }
+
+        let typeChartInstance = null;
+        let locationChartInstance = null;
+
+        const PIE_COLORS = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac'];
+
+        function bucketTopFive(entries) {
+            const top = entries.slice(0, 5);
+            const otherTotal = entries.slice(5).reduce((s, e) => s + e[1], 0);
+            if (otherTotal > 0) top.push(['Other Categories', otherTotal]);
+            return top;
+        }
+
+        function renderPieChart(canvasId, listId, allEntries, existingInstance) {
+            const bucketed = bucketTopFive(allEntries);
+            const labels = bucketed.map(e => e[0]);
+            const values = bucketed.map(e => e[1]);
+            const colors = PIE_COLORS.slice(0, labels.length);
+
+            if (existingInstance) existingInstance.destroy();
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const instance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{ data: values, backgroundColor: colors, borderWidth: 1 }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed}` } }
+                    }
+                }
+            });
+
+            const total = values.reduce((s, v) => s + v, 0);
+            document.getElementById(listId).innerHTML = bucketed.map(([label, count], i) => `
+                <div class="panel-item">
+                    <span style="display:flex;align-items:center;gap:6px;">
+                        <span style="width:8px;height:8px;border-radius:50%;background:${colors[i]};flex-shrink:0;"></span>
+                        ${label}
+                    </span>
+                    <span><strong>${count}</strong> <span style="color:#999;">${total > 0 ? Math.round(count/total*100) : 0}%</span></span>
+                </div>
+            `).join('');
+
+            return instance;
+        }
+
+        async function loadDashboard() {
+            try {
+                const [statsRes, locRes, recentRes] = await Promise.all([
+                    fetch(`${API_URL}/stats`),
+                    fetch(`${API_URL}/assets?limit=500`),
+                    fetch(`${API_URL}/assets?limit=5`)
+                ]);
+                const data = await statsRes.json();
+                const locData = await locRes.json();
+                const recentData = await recentRes.json();
+
+                document.getElementById('total-assets').textContent = data.total_assets;
+                document.getElementById('functional-count').textContent = data.by_status.Functional || 0;
+                document.getElementById('non-functional-count').textContent = data.by_status['Non-Functional'] || 0;
+                document.getElementById('condemned-count').textContent = data.by_status.Condemned || 0;
+
+                const pct = data.total_assets > 0 ? Math.round((data.by_status.Functional || 0) / data.total_assets * 100) : 0;
+                document.getElementById('functional-pct').textContent = pct + '% of total';
+
+                // Pie: by type
+                const typeEntries = Object.entries(data.by_type).sort((a, b) => b[1] - a[1]);
+                typeChartInstance = renderPieChart('type-chart', 'type-list', typeEntries, typeChartInstance);
+
+                // Pie: by location
+                const locationMap = {};
+                locData.items.forEach(a => {
+                    const loc = a.location || 'Unknown';
+                    locationMap[loc] = (locationMap[loc] || 0) + 1;
+                });
+                const locEntries = Object.entries(locationMap).sort((a, b) => b[1] - a[1]);
+                locationChartInstance = renderPieChart('location-chart', 'location-list', locEntries, locationChartInstance);
+
+                // Recent activity — 5 most recent
+                const statusBg = { 'Functional': '#e8f5e9', 'Non-Functional': '#fffde7', 'Condemned': '#ffebee' };
+                document.getElementById('activity-chart').innerHTML = recentData.items.map(a =>
+                    `<div class="panel-item" style="justify-content: space-between;"><span style="font-size: 10px;">${a.asset_name}</span><span style="background: ${statusBg[a.status] || '#f0f0f0'}; border: 1px solid #999; border-radius: 3px; padding: 1px 6px; font-size: 9px; font-weight: 600;">${a.status}</span></div>`
+                ).join('');
+            } catch (err) {
+                console.error('Error loading dashboard:', err);
+            }
+        }
+
+        function toggleSortDir() {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            const btn = document.getElementById('sortDirBtn');
+            btn.textContent = sortDir === 'asc' ? '▲ Asc' : '▼ Desc';
+            loadAssets(true);
+        }
+
+        function makeAssetRow(asset, isExpanded = false) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${asset.sl_no}</td>
+                <td>${asset.asset_name}</td>
+                <td>${asset.dop || '—'}</td>
+                <td>${asset.si_no}</td>
+                <td>${asset.asset_type}</td>
+                <td><span class="badge badge-${asset.status.toLowerCase().replace(/ /g, '-')}">${asset.status}</span></td>
+                <td>${asset.vendor || '—'}</td>
+                <td>${asset.location || '—'}</td>
+                <td>${asset.value ? '₹' + asset.value.toLocaleString('en-IN') : '—'}</td>
+                <td>
+                    <button class="btn btn-small" onclick="openEditModal(${asset.id})">Edit</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteAsset(${asset.id})">Delete</button>
+                </td>
+            `;
+            return tr;
+        }
+
+        function makeGroupedAssetRow(groupKey, items) {
+            const tr = document.createElement('tr');
+            tr.className = 'grouped-asset-row';
+            tr.style.background = '#f0f0f0';
+            tr.style.fontWeight = '600';
+
+            const itemCount = items.length;
+            const unitPrice = items[0].value;
+            const totalPrice = unitPrice * itemCount;
+            const groupId = 'group-' + Math.random().toString(36).substr(2, 9);
+
+            tr.innerHTML = `
+                <td style="text-align: center; cursor: pointer;" onclick="toggleGroup('${groupId}')" title="Click to expand/collapse">
+                    <span style="font-size: 14px; color: #666; user-select: none;">▶</span>
+                </td>
+                <td colspan="2">${items[0].asset_name} <span style="font-weight: normal; color: #666;">× ${itemCount}</span></td>
+                <td>${items[0].dop || '—'}</td>
+                <td>${items[0].asset_type}</td>
+                <td></td>
+                <td>${items[0].vendor || '—'}</td>
+                <td></td>
+                <td style="font-weight: 700;">₹${totalPrice.toLocaleString('en-IN')}</td>
+                <td></td>
+            `;
+            tr.dataset.groupId = groupId;
+            return { row: tr, groupId, items };
+        }
+
+        function toggleGroup(groupId) {
+            const details = document.querySelectorAll(`tr[data-parent-group="${groupId}"]`);
+            const button = document.querySelector(`tr[data-group-id="${groupId}"] button`);
+            const isHidden = details[0]?.style.display === 'none';
+            details.forEach(row => row.style.display = isHidden ? '' : 'none');
+            button.textContent = isHidden ? '▼' : '▶';
+        }
+
+        function makeGroupHeaderRow(label, count) {
+            const tr = document.createElement('tr');
+            tr.className = 'group-header-row';
+            tr.innerHTML = `<td colspan="10">${label} <span style="font-weight:400;color:#666;">(${count})</span></td>`;
+            return tr;
+        }
+
+        function groupAssetsByPurchase(assets) {
+            const groups = {};
+            const result = [];
+
+            assets.forEach(asset => {
+                const key = `${asset.asset_name}|${asset.vendor || 'NA'}|${asset.dop || 'NA'}`;
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(asset);
+            });
+
+            Object.entries(groups).forEach(([key, items]) => {
+                if (items.length > 1) {
+                    result.push({ type: 'group', key, items });
+                } else {
+                    result.push({ type: 'single', item: items[0] });
+                }
+            });
+
+            return result;
+        }
+
+        async function loadAssets(reset = true) {
+            if (assetsLoading) return;
+            const groupBy = document.getElementById('groupBy').value;
+            const isGrouped = !!groupBy;
+
+            if (!reset && !isGrouped && currentSkip >= assetsTotal && assetsTotal > 0) return;
+
+            if (reset) {
+                currentSkip = 0;
+                assetsTotal = 0;
+                document.getElementById('assetsList').innerHTML = '';
+            }
+
+            assetsLoading = true;
+            document.getElementById('scrollLoader').style.display = 'block';
+
+            try {
+                const status = document.getElementById('filterStatus').value;
+                const assetType = document.getElementById('filterType').value;
+                const location = document.getElementById('filterLocation').value;
+                const search = document.getElementById('searchInput').value.trim();
+                const sortBy = document.getElementById('sortBy').value;
+
+                // Load all items for proper grouping by purchase
+                const limit = isGrouped ? 500 : 500;
+                const skip = isGrouped ? 0 : 0;
+
+                let url = `${API_URL}/assets?skip=${skip}&limit=${limit}&sort_by=${sortBy}&sort_dir=${sortDir}`;
+                if (status) url += `&status=${encodeURIComponent(status)}`;
+                if (assetType) url += `&asset_type=${encodeURIComponent(assetType)}`;
+                if (location) url += `&location=${encodeURIComponent(location)}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                assetsTotal = data.total;
+
+                const tbody = document.getElementById('assetsList');
+
+                if (!data.items || data.items.length === 0) {
+                    if (reset) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;">No assets found</td></tr>';
+                    document.getElementById('pageInfo').textContent = `${assetsTotal} total`;
+                    return;
+                }
+
+                if (isGrouped) {
+                    const groups = {};
+                    const groupOrder = [];
+                    data.items.forEach(a => {
+                        const key = a[groupBy] || '—';
+                        if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+                        groups[key].push(a);
+                    });
+                    groupOrder.forEach(key => {
+                        tbody.appendChild(makeGroupHeaderRow(key, groups[key].length));
+                        groups[key].forEach(a => tbody.appendChild(makeAssetRow(a)));
+                    });
+                    document.getElementById('pageInfo').textContent = `${assetsTotal} total · grouped by ${groupBy.replace('_', ' ')}`;
+                } else {
+                    // Auto-group items purchased together (all items loaded at once)
+                    const purchaseGroups = groupAssetsByPurchase(data.items);
+                    purchaseGroups.forEach(item => {
+                        if (item.type === 'group') {
+                            const grouped = makeGroupedAssetRow(item.key, item.items);
+                            tbody.appendChild(grouped.row);
+                            grouped.row.dataset.groupId = grouped.groupId;
+                            item.items.forEach(asset => {
+                                const detailRow = makeAssetRow(asset);
+                                detailRow.style.display = 'none';
+                                detailRow.dataset.parentGroup = grouped.groupId;
+                                tbody.appendChild(detailRow);
+                            });
+                        } else {
+                            tbody.appendChild(makeAssetRow(item.item));
+                        }
+                    });
+                    document.getElementById('pageInfo').textContent = `${assetsTotal} total`;
+                }
+            } catch (err) {
+                console.error('Error loading assets:', err);
+            } finally {
+                assetsLoading = false;
+                document.getElementById('scrollLoader').style.display = 'none';
+            }
+        }
+
+        function onAssetsScroll() {
+            const content = document.getElementById('assetsContent');
+            if (!content) return;
+            if (content.scrollTop + content.clientHeight >= content.scrollHeight - 80) {
+                loadAssets(false);
+            }
+        }
+
+        function parseAssetDate(value) {
+            if (!value) return null;
+            const parts = String(value).trim().split('/').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+            const [day, month, year] = parts;
+            return new Date(year, month - 1, day);
+        }
+
+        function formatAssetAge(startDate, endDate) {
+            if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return '';
+            if (!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return '';
+
+            let months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+            if (months < 0) months = 0;
+            const years = Math.floor(months / 12);
+            const remMonths = months % 12;
+            return `${years} yrs ${remMonths} mo`;
+        }
+
+        function getAssetAgeEndDate() {
+            const disposed = document.getElementById('disposedToggle')?.checked;
+            const disposalDate = parseAssetDate(document.getElementById('disposal_date_input')?.value || '');
+            return disposed && disposalDate ? disposalDate : new Date();
+        }
+
+        function updateAssetAge() {
+            const dop = parseAssetDate(document.getElementById('dop_input').value);
+            const endDate = getAssetAgeEndDate();
+            document.getElementById('age_input').value = dop ? formatAssetAge(dop, endDate) : '';
+            calculateAddGST();
+        }
+
+        function toggleDisposedFields() {
+            const checked = document.getElementById('disposedToggle').checked;
+            document.getElementById('disposalFields').style.display = checked ? 'block' : 'none';
+            updateAssetAge();
+        }
+
+        function renderSerialInputs() {
+            const quantity = Math.max(1, parseInt(document.getElementById('quantity_input').value, 10) || 1);
+            const requiredCount = getRequiredSerialCount();
+            const container = document.getElementById('serialNumbersContainer');
+            const hiddenField = document.getElementById('serialNumbersValue');
+
+            // Trim existing serials if quantity decreased
+            if (serialNumbers.length > requiredCount) serialNumbers = serialNumbers.slice(0, requiredCount);
+
+            container.innerHTML = `
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <label style="font-size:11px; display:flex; align-items:center; gap:8px;"><input type="checkbox" id="siNotApplicableToggle" ${siNotApplicable ? 'checked' : ''}> SI not applicable (use 'NA' for all units)</label>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:4px;">
+                    <label style="font-size:11px; display:flex; align-items:center; gap:8px;"><input type="checkbox" id="includeExtraMonitorSiToggle" ${(quantity === 1 && includeExtraMonitorSi) ? 'checked' : ''} ${quantity !== 1 ? 'disabled' : ''}> Single item includes separate monitor SI (allow one extra SI)</label>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                    <input type="text" id="serialNumberInputMain" placeholder="Enter SI No and press Enter" style="flex:1; padding:6px; font-size:11px;">
+                    <button type="button" class="btn btn-small" id="addSerialBtn">Add</button>
+                </div>
+                <div id="serialListDisplay" style="margin-top:8px; font-size:11px;"></div>
+                <div style="font-size: 10px; color: #888; margin-top: 6px;" id="serialsHelper"></div>
+            `;
+
+            // initialize from hidden field if present (but preserve existing in-memory serials)
+            const fromHidden = (hiddenField.value || '').split(/\r?\n/).filter(Boolean);
+            if (fromHidden.length) serialNumbers = fromHidden.slice(0, requiredCount);
+            updateSerialListDisplay();
+
+            const input = document.getElementById('serialNumberInputMain');
+            const siToggle = document.getElementById('siNotApplicableToggle');
+            const extraSiToggle = document.getElementById('includeExtraMonitorSiToggle');
+            // restore toggle handler/state
+            siToggle.addEventListener('change', () => toggleSiNotApplicable());
+            extraSiToggle.addEventListener('change', () => toggleExtraMonitorSi());
+            siNotApplicable = siToggle.checked;
+            if (quantity !== 1) includeExtraMonitorSi = false;
+
+            input.disabled = siNotApplicable || (serialNumbers.length >= getRequiredSerialCount());
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addSerial(); }
+            });
+
+            document.getElementById('addSerialBtn').addEventListener('click', () => addSerial());
+        }
+
+        function addSerial() {
+            const quantity = getRequiredSerialCount();
+            const input = document.getElementById('serialNumberInputMain');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return;
+            if (serialNumbers.includes(val)) {
+                input.value = '';
+                return;
+            }
+            if (serialNumbers.length >= quantity) {
+                input.value = '';
+                return;
+            }
+            serialNumbers.push(val);
+            input.value = '';
+            if (serialNumbers.length >= quantity) input.disabled = true;
+            syncSerialNumbers();
+            updateSerialListDisplay();
+        }
+
+        function removeSerial(index) {
+            serialNumbers.splice(index, 1);
+            document.getElementById('serialNumberInputMain').disabled = false;
+            syncSerialNumbers();
+            updateSerialListDisplay();
+        }
+
+        function updateSerialListDisplay() {
+            const quantity = getRequiredSerialCount();
+            const display = document.getElementById('serialListDisplay');
+            if (!display) return;
+            if (siNotApplicable) {
+                display.innerHTML = `<div style="color:#666;">SI set to 'NA' for all ${quantity} unit(s)</div>`;
+            } else {
+                display.innerHTML = serialNumbers.length ? serialNumbers.map((s, i) => `
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                        <span style="flex:1; font-size:11px;">${s}</span>
+                        <button type="button" class="btn btn-small btn-danger" onclick="removeSerial(${i})">Remove</button>
+                    </div>
+                `).join('') : '<div style="color:#888;">No serials entered</div>';
+            }
+            document.getElementById('serialsHelper').textContent = `${serialNumbers.length} / ${quantity} entered`;
+            document.getElementById('serialNumbersValue').value = serialNumbers.join('\n');
+        }
+
+        function toggleExtraMonitorSi() {
+            const quantity = getCurrentQuantity();
+            includeExtraMonitorSi = quantity === 1 && document.getElementById('includeExtraMonitorSiToggle').checked;
+            const requiredCount = getRequiredSerialCount();
+
+            if (serialNumbers.length > requiredCount) {
+                serialNumbers = serialNumbers.slice(0, requiredCount);
+            }
+
+            if (siNotApplicable) {
+                serialNumbers = Array(requiredCount).fill('NA');
+            }
+
+            const input = document.getElementById('serialNumberInputMain');
+            if (input) input.disabled = siNotApplicable || (serialNumbers.length >= requiredCount);
+
+            syncSerialNumbers();
+            updateSerialListDisplay();
+        }
+
+        function toggleSiNotApplicable() {
+            const qty = getRequiredSerialCount();
+            siNotApplicable = document.getElementById('siNotApplicableToggle').checked;
+            if (siNotApplicable) {
+                serialNumbers = Array(qty).fill('NA');
+                document.getElementById('serialNumberInputMain').disabled = true;
+            } else {
+                // clear NA entries so user can enter actual serials
+                serialNumbers = [];
+                document.getElementById('serialNumberInputMain').disabled = false;
+            }
+            syncSerialNumbers();
+            updateSerialListDisplay();
+        }
+
+        function getCurrentQuantity() {
+            return Math.max(1, parseInt(document.getElementById('quantity_input').value, 10) || 1);
+        }
+
+        function syncSerialNumbers() {
+            document.getElementById('serialNumbersValue').value = serialNumbers.join('\n');
+        }
+
+        function calculateTotalValue() {
+            const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
+            const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
+            const totalValue = quantity * pricePerUnit;
+            document.getElementById('simpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            const display = document.getElementById('price_per_unit_display');
+            if (display) display.value = pricePerUnit > 0 ? pricePerUnit.toFixed(2) : '';
+            updateAssetAge();
+        }
+
+        function toggleGST() {
+            const checked = document.getElementById('gstApplicable').checked;
+            document.getElementById('gstSection').style.display = checked ? 'grid' : 'none';
+            if (checked) {
+                calculateAddGST();
+            }
+        }
+
+        function updateGstModeLabel() {
+            const mode = document.getElementById('gstModeSelect').value;
+            document.getElementById('gstValueLabel').textContent = mode === 'amount' ? 'GST Amount (₹)' : 'GST Rate (%)';
+            document.getElementById('gstValueInput').placeholder = mode === 'amount' ? 'e.g. 9200' : '18';
+        }
+
+        function calculateAddGST() {
+            const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
+            const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
+            const basePrice = quantity * pricePerUnit;
+            const gstMode = document.getElementById('gstModeSelect').value;
+            const interState = document.getElementById('gstInterstateToggle').checked;
+            const gstInput = parseFloat(document.getElementById('gstValueInput').value) || 0;
+            const gstAmount = gstMode === 'amount' ? gstInput : basePrice * (gstInput / 100);
+            const halfAmount = interState ? 0 : gstAmount / 2;
+            const cgstAmount = interState ? 0 : halfAmount;
+            const sgstAmount = interState ? 0 : halfAmount;
+            const igstAmount = interState ? gstAmount : 0;
+            const cgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${cgstAmount.toFixed(2)}`);
+            const sgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${sgstAmount.toFixed(2)}`);
+            const igstText = interState ? (gstMode === 'percent' ? `${gstInput.toFixed(2)}%` : `₹${igstAmount.toFixed(2)}`) : '0.00';
+            const totalValue = basePrice + gstAmount;
+
+            document.getElementById('cgstDisplay').value = cgstText;
+            document.getElementById('sgstDisplay').value = sgstText;
+            document.getElementById('igstDisplay').value = igstText;
+            document.getElementById('gstAmountDisplay').value = gstAmount > 0 ? gstAmount.toFixed(2) : '';
+            document.getElementById('totalValueDisplay').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('simpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('price_per_unit').dataset.basePrice = basePrice > 0 ? basePrice.toFixed(2) : '';
+        }
+
+        function resetGSTFields() {
+            document.getElementById('gstModeSelect').value = 'percent';
+            document.getElementById('gstValueInput').value = '18';
+            document.getElementById('gstInterstateToggle').checked = false;
+            document.getElementById('cgstDisplay').value = '';
+            document.getElementById('sgstDisplay').value = '';
+            document.getElementById('igstDisplay').value = '';
+            document.getElementById('gstAmountDisplay').value = '';
+            document.getElementById('totalValueDisplay').value = '';
+            document.getElementById('simpleValueInput').value = '';
+            updateGstModeLabel();
+        }
+
+        function calculateEditSimpleValue() {
+            const quantity = parseFloat(document.getElementById('editForm').quantity?.value) || 1;
+            const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+            const totalValue = quantity * pricePerUnit;
+            document.getElementById('editSimpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            updateEditAssetAge();
+        }
+
+        function toggleEditDisposedFields() {
+            const checked = document.getElementById('editDisposedToggle').checked;
+            document.getElementById('editDisposalFields').style.display = checked ? 'block' : 'none';
+            updateEditAssetAge();
+        }
+
+        function updateEditAssetAge() {
+            const dop = parseAssetDate(document.getElementById('editDopInput').value);
+            const disposed = document.getElementById('editDisposedToggle').checked;
+            const disposalDate = parseAssetDate(document.getElementById('editDisposalDateInput').value);
+            const endDate = disposed && disposalDate ? disposalDate : new Date();
+            document.getElementById('editAgeInput').value = dop ? formatAssetAge(dop, endDate) : '';
+            calculateEditGST();
+        }
+
+        function updateEditGstModeLabel() {
+            const mode = document.getElementById('editGstModeSelect').value;
+            document.getElementById('editGstValueLabel').textContent = mode === 'amount' ? 'GST Amount (₹)' : 'GST Rate (%)';
+            document.getElementById('editGstValueInput').placeholder = mode === 'amount' ? 'e.g. 9200' : '18';
+        }
+
+        function toggleEditGST() {
+            const checked = document.getElementById('editGstApplicable').checked;
+            document.getElementById('editGstSection').style.display = checked ? 'grid' : 'none';
+            if (checked) {
+                calculateEditGST();
+            }
+        }
+
+        function calculateEditGST() {
+            const quantity = currentEditQuantity || 1;
+            const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+            const basePrice = quantity * pricePerUnit;
+            const gstMode = document.getElementById('editGstModeSelect').value;
+            const interState = document.getElementById('editGstInterstateToggle').checked;
+            const gstInput = parseFloat(document.getElementById('editGstValueInput').value) || 0;
+            const gstAmount = gstMode === 'amount' ? gstInput : basePrice * (gstInput / 100);
+            const halfAmount = interState ? 0 : gstAmount / 2;
+            const cgstAmount = interState ? 0 : halfAmount;
+            const sgstAmount = interState ? 0 : halfAmount;
+            const igstAmount = interState ? gstAmount : 0;
+            const cgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${cgstAmount.toFixed(2)}`);
+            const sgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${sgstAmount.toFixed(2)}`);
+            const igstText = interState ? (gstMode === 'percent' ? `${gstInput.toFixed(2)}%` : `₹${igstAmount.toFixed(2)}`) : '0.00';
+            const totalValue = basePrice + gstAmount;
+
+            document.getElementById('editCgstDisplay').value = cgstText;
+            document.getElementById('editSgstDisplay').value = sgstText;
+            document.getElementById('editIgstDisplay').value = igstText;
+            document.getElementById('editGstAmountDisplay').value = gstAmount > 0 ? gstAmount.toFixed(2) : '';
+            document.getElementById('editTotalValueDisplay').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('editSimpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+        }
+
+        document.getElementById('assetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            syncSerialNumbers();
+
+            const requiredSerials = getRequiredSerialCount();
+            if (!siNotApplicable && serialNumbers.length !== requiredSerials) {
+                showAlert('entry-alert', `Please enter ${requiredSerials} SI number(s) for this item.`, 'error');
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.quantity = parseInt(data.quantity);
+            data.gst_applicable = document.getElementById('gstApplicable').checked;
+            data.gst_mode = document.getElementById('gstModeSelect').value;
+            data.gst_place = document.getElementById('gstInterstateToggle').checked ? 'inter' : 'intra';
+
+            delete data.price_per_unit;
+
+            if (data.gst_applicable) {
+                const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
+                const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
+                const basePrice = quantity * pricePerUnit;
+                const gstInput = parseFloat(document.getElementById('gstValueInput').value) || 0;
+                const gstAmount = data.gst_mode === 'amount' ? gstInput : basePrice * (gstInput / 100);
+
+                data.base_price = basePrice;
+                data.gst_rate = data.gst_mode === 'percent' ? gstInput : 0;
+                data.gst_amount = gstAmount;
+                data.value = basePrice + gstAmount;
+                data.cgst_rate = data.gst_place === 'inter' || data.gst_mode === 'amount' ? 0 : (gstInput / 2);
+                data.sgst_rate = data.gst_place === 'inter' || data.gst_mode === 'amount' ? 0 : (gstInput / 2);
+                data.igst_rate = data.gst_place === 'inter' && data.gst_mode === 'percent' ? gstInput : 0;
+                data.cgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
+                data.sgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
+                data.igst_amount = data.gst_place === 'inter' ? gstAmount : 0;
+            } else {
+                data.value = parseFloat(data.value) || null;
+                data.base_price = data.value;
+                data.gst_rate = 0;
+                data.gst_amount = 0;
+                data.gst_mode = 'percent';
+                data.gst_place = 'intra';
+                data.cgst_rate = 0;
+                data.sgst_rate = 0;
+                data.igst_rate = 0;
+                data.cgst_amount = 0;
+                data.sgst_amount = 0;
+                data.igst_amount = 0;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/assets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    showAlert('entry-alert', 'Asset saved successfully!', 'success');
+                    e.target.reset();
+                    serialNumbers = [];
+                    siNotApplicable = false;
+                    includeExtraMonitorSi = false;
+                    renderSerialInputs();
+                    resetGSTFields();
+                    loadOptions();
+                } else {
+                    const err = await res.json();
+                    showAlert('entry-alert', 'Error: ' + err.detail, 'error');
+                }
+            } catch (err) {
+                showAlert('entry-alert', 'Error saving asset', 'error');
+            }
+        });
+
+        async function openEditModal(id) {
+            try {
+                const res = await fetch(`${API_URL}/assets/${id}`);
+                const asset = await res.json();
+
+                currentEditId = id;
+                currentEditQuantity = asset.quantity || 1;
+                document.getElementById('editForm').asset_name.value = asset.asset_name;
+                document.getElementById('editForm').si_no.value = asset.si_no;
+                document.getElementById('editForm').dop.value = asset.dop || '';
+                document.getElementById('editDopInput').value = asset.dop || '';
+                document.getElementById('editAgeInput').value = asset.age || '';
+                document.getElementById('editDisposedToggle').checked = asset.disposed || false;
+                document.getElementById('editDisposalDateInput').value = asset.disposal_date || '';
+                document.getElementById('editForm').disposal_reason.value = asset.disposal_reason || '';
+                document.getElementById('editForm').status.value = asset.status;
+                document.getElementById('editForm').location.value = asset.location;
+                document.getElementById('editForm').department.value = asset.department;
+                document.getElementById('editForm').asset_type.value = asset.asset_type;
+                document.getElementById('editForm').vendor.value = asset.vendor;
+                document.getElementById('editPricePerUnitInput').value = asset.quantity ? ((asset.base_price || asset.value || 0) / asset.quantity).toFixed(2) : (asset.base_price || asset.value || '');
+
+                // Handle GST
+                document.getElementById('editGstApplicable').checked = asset.gst_applicable || false;
+                if (asset.gst_applicable) {
+                    document.getElementById('editGstModeSelect').value = asset.gst_mode || 'percent';
+                    document.getElementById('editGstInterstateToggle').checked = (asset.gst_place || 'intra') === 'inter';
+                    document.getElementById('editGstValueInput').value = asset.gst_mode === 'amount' ? (asset.gst_amount || '') : (asset.gst_rate || '18');
+                    document.getElementById('editGstAmountDisplay').value = asset.gst_amount || '0';
+                    document.getElementById('editTotalValueDisplay').value = asset.value || '';
+                } else {
+                    document.getElementById('editSimpleValueInput').value = asset.value || '';
+                }
+                toggleEditDisposedFields();
+                updateEditGstModeLabel();
+                toggleEditGST();
+                document.getElementById('editModal').classList.add('active');
+            } catch (err) {
+                console.error('Error loading asset:', err);
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function toggleEditGST() {
+            const checked = document.getElementById('editGstApplicable').checked;
+            document.getElementById('editGstSection').style.display = checked ? 'grid' : 'none';
+            document.getElementById('editNoGstSection').style.display = checked ? 'none' : 'block';
+            if (checked) {
+                calculateEditGST();
+            }
+        }
+
+        function calculateEditGST() {
+            const quantity = currentEditQuantity || 1;
+            const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+            const basePrice = quantity * pricePerUnit;
+            const gstMode = document.getElementById('editGstModeSelect').value;
+            const interState = document.getElementById('editGstInterstateToggle').checked;
+            const gstInput = parseFloat(document.getElementById('editGstValueInput').value) || 0;
+            const gstAmount = gstMode === 'amount' ? gstInput : basePrice * (gstInput / 100);
+            const halfAmount = interState ? 0 : gstAmount / 2;
+            const cgstAmount = interState ? 0 : halfAmount;
+            const sgstAmount = interState ? 0 : halfAmount;
+            const igstAmount = interState ? gstAmount : 0;
+            const cgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${cgstAmount.toFixed(2)}`);
+            const sgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${sgstAmount.toFixed(2)}`);
+            const igstText = interState ? (gstMode === 'percent' ? `${gstInput.toFixed(2)}%` : `₹${igstAmount.toFixed(2)}`) : '0.00';
+            const totalValue = basePrice + gstAmount;
+
+            document.getElementById('editCgstDisplay').value = cgstText;
+            document.getElementById('editSgstDisplay').value = sgstText;
+            document.getElementById('editIgstDisplay').value = igstText;
+            document.getElementById('editGstAmountDisplay').value = gstAmount.toFixed(2);
+            document.getElementById('editTotalValueDisplay').value = totalValue.toFixed(2);
+            document.getElementById('editSimpleValueInput').value = totalValue.toFixed(2);
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            delete data.price_per_unit;
+
+            const gstApplicable = document.getElementById('editGstApplicable').checked;
+            data.gst_applicable = gstApplicable;
+            data.gst_mode = document.getElementById('editGstModeSelect').value;
+            data.gst_place = document.getElementById('editGstInterstateToggle').checked ? 'inter' : 'intra';
+            data.disposed = document.getElementById('editDisposedToggle').checked;
+
+            if (gstApplicable) {
+                const quantity = currentEditQuantity || 1;
+                const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+                const basePrice = quantity * pricePerUnit;
+                const gstInput = parseFloat(document.getElementById('editGstValueInput').value) || 0;
+                const gstAmount = data.gst_mode === 'amount' ? gstInput : basePrice * (gstInput / 100);
+
+                data.base_price = basePrice;
+                data.gst_rate = data.gst_mode === 'percent' ? gstInput : 0;
+                data.gst_amount = gstAmount;
+                data.value = basePrice + gstAmount;
+                data.cgst_rate = data.gst_place === 'inter' || data.gst_mode === 'amount' ? 0 : (gstInput / 2);
+                data.sgst_rate = data.gst_place === 'inter' || data.gst_mode === 'amount' ? 0 : (gstInput / 2);
+                data.igst_rate = data.gst_place === 'inter' && data.gst_mode === 'percent' ? gstInput : 0;
+                data.cgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
+                data.sgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
+                data.igst_amount = data.gst_place === 'inter' ? gstAmount : 0;
+            } else {
+                data.value = parseFloat(data.value) || null;
+                delete data.base_price;
+                data.gst_rate = 0;
+                data.gst_amount = 0;
+                data.gst_mode = 'percent';
+                data.gst_place = 'intra';
+                data.cgst_rate = 0;
+                data.sgst_rate = 0;
+                data.igst_rate = 0;
+                data.cgst_amount = 0;
+                data.sgst_amount = 0;
+                data.igst_amount = 0;
+            }
+
+            // Remove null/undefined values to avoid validation errors
+            Object.keys(data).forEach(key => {
+                if (data[key] === null || data[key] === undefined || data[key] === '') {
+                    delete data[key];
+                }
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/assets/${currentEditId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const responseBody = await res.json();
+
+                if (res.ok) {
+                    closeEditModal();
+                    loadAssets(true);
+                    showAlert('assets-alert', 'Asset updated successfully!', 'success');
+                } else {
+                    let errMsg = 'Failed to update asset';
+                    if (Array.isArray(responseBody)) {
+                        errMsg = responseBody.map(e => e.msg || e.detail || JSON.stringify(e)).join('; ');
+                    } else if (responseBody.detail) {
+                        errMsg = responseBody.detail;
+                    }
+                    console.error('Update error:', errMsg);
+                    showAlert('assets-alert', 'Error: ' + errMsg, 'error');
+                }
+            } catch (err) {
+                console.error('Error updating asset:', err);
+                showAlert('assets-alert', 'Error: ' + err.message, 'error');
+            }
+        });
+
+        async function deleteAsset(id) {
+            if (!confirm('Are you sure you want to delete this asset?')) return;
+
+            try {
+                const res = await fetch(`${API_URL}/assets/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadAssets();
+                }
+            } catch (err) {
+                console.error('Error deleting asset:', err);
+            }
+        }
+
+        async function exportToExcel() {
+            try {
+                const res = await fetch(`${API_URL}/export-excel`, { method: 'POST' });
+                if (res.ok) {
+                    showAlert('export-alert', 'Excel file exported successfully!', 'success');
+                }
+            } catch (err) {
+                showAlert('export-alert', 'Error exporting to Excel', 'error');
+            }
+        }
+
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            alert.textContent = message;
+            alert.className = `alert ${type}`;
+            setTimeout(() => {
+                alert.className = 'alert';
+            }, 3000);
+        }
+
+        // Maintenance functions
+        async function loadMaintenanceAssets() {
+            try {
+                const res = await fetch(`${API_URL}/assets?limit=500`);
+                const data = await res.json();
+                allAssets = data.items;
+
+                const list = document.getElementById('assetList');
+                list.innerHTML = data.items.map(a => `
+                    <div class="maint-asset-item" onclick="selectAsset(${a.id}, '${a.asset_name}')" style="padding: 8px 10px; border-bottom: 1px solid #ddd; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#eee'" onmouseout="this.style.background='transparent'">
+                        <div style="font-size: 11px; font-weight: 600; color: #222;">${a.asset_name}</div>
+                        <div style="font-size: 9px; color: #888;">${a.asset_type}</div>
+                    </div>
+                `).join('');
+
+                // Also populate the maintenance modal dropdown
+                document.getElementById('maint_asset_id').innerHTML = '<option value="">Select asset...</option>' + data.items.map(a => `<option value="${a.id}">${a.asset_name} (${summarizeSerials(a.si_no)})</option>`).join('');
+            } catch (err) {
+                console.error('Error loading assets:', err);
+            }
+        }
+
+        async function selectAsset(assetId, assetName) {
+            selectedAssetId = assetId;
+            document.querySelectorAll('.maint-asset-item').forEach(el => el.style.background = 'transparent');
+            event.target.closest('.maint-asset-item').style.background = '#e8e8e8';
+
+            // Load maintenance entries for this asset
+            try {
+                const res = await fetch(`${API_URL}/assets/${assetId}/maintenance`);
+                const entries = await res.json();
+
+                const panel = document.getElementById('maintenancePanel');
+                if (entries.length === 0) {
+                    panel.innerHTML = '<div style="padding: 40px 20px; text-align: center; color: #888;">No maintenance entries for this asset</div>';
+                    return;
+                }
+
+                const statusBadgeColor = { 'Pending': '#fff3cd', 'In Progress': '#d1ecf1', 'Completed': '#d4edda' };
+                const statusBadgeText = { 'Pending': '#856404', 'In Progress': '#0c5460', 'Completed': '#155724' };
+
+                panel.innerHTML = entries.map(e => `
+                    <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 8px; background: #fff;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                            <div style="display: flex; gap: 8px;">
+                                <span style="background: #e8e8e8; border: 1px solid #999; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600;">${e.entry_type}</span>
+                                <span style="background: ${statusBadgeColor[e.status] || '#f5f5f5'}; border: 1px solid #ccc; border-radius: 3px; padding: 2px 6px; font-size: 10px; font-weight: 600; color: ${statusBadgeText[e.status] || '#666'};">${e.status}</span>
+                            </div>
+                            <button class="btn btn-small btn-danger" onclick="deleteMaintenance(${e.id})">Delete</button>
+                        </div>
+                        <div style="font-size: 10px; color: #666; margin-bottom: 4px;">
+                            <div><strong>Date:</strong> ${e.date}</div>
+                            <div><strong>Technician:</strong> ${e.technician}</div>
+                            ${e.cost > 0 ? `<div><strong>Cost:</strong> ₹${e.cost.toLocaleString('en-IN')}</div>` : ''}
+                            ${e.scrap_value > 0 ? `<div><strong>Scrap Value:</strong> ₹${e.scrap_value.toLocaleString('en-IN')}</div>` : ''}
+                        </div>
+                        ${e.notes ? `<div style="font-size: 10px; color: #555; background: #f9f9f9; padding: 6px; border-radius: 3px; margin-top: 6px;">${e.notes}</div>` : ''}
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Error loading maintenance entries:', err);
+            }
+        }
+
+        function toggleScrapValue() {
+            const entryType = document.getElementById('maint_entry_type').value;
+            const scrapSection = document.getElementById('scrapValueSection');
+            scrapSection.style.display = entryType === 'Discarded' ? 'block' : 'none';
+            if (entryType !== 'Discarded') {
+                document.getElementById('scrap_value_input').value = '';
+            }
+        }
+
+        function openMaintenanceModal() {
+            if (allAssets.length === 0) {
+                alert('No assets available. Please add assets first.');
+                return;
+            }
+            document.getElementById('maintenanceForm').reset();
+            toggleScrapValue();
+            document.getElementById('maintenanceModal').classList.add('active');
+        }
+
+        function closeMaintenanceModal() {
+            document.getElementById('maintenanceModal').classList.remove('active');
+        }
+
+        document.getElementById('maintenanceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.asset_id = parseInt(data.asset_id);
+            data.cost = parseFloat(data.cost) || 0;
+            data.scrap_value = parseFloat(data.scrap_value) || 0;
+
+            try {
+                const res = await fetch(`${API_URL}/maintenance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    closeMaintenanceModal();
+                    if (selectedAssetId) {
+                        selectAsset(selectedAssetId);
+                    }
+                } else {
+                    const err = await res.json();
+                    alert('Error: ' + err.detail);
+                }
+            } catch (err) {
+                alert('Error saving maintenance entry');
+            }
+        });
+
+        async function deleteMaintenance(entryId) {
+            if (!confirm('Delete this maintenance entry?')) return;
+
+            try {
+                const res = await fetch(`${API_URL}/maintenance/${entryId}`, { method: 'DELETE' });
+                if (res.ok && selectedAssetId) {
+                    selectAsset(selectedAssetId);
+                }
+            } catch (err) {
+                alert('Error deleting entry');
+            }
+        }
+
+        renderSerialInputs();
+        updateGstModeLabel();
+        updateEditGstModeLabel();
+        loadOptions();
+        loadMaintenanceAssets();
+
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => loadAssets(true), 300);
+        });
+
+        document.getElementById('assetsContent').addEventListener('scroll', onAssetsScroll);
+    </script>
+</body>
+</html>
