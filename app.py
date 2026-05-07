@@ -601,7 +601,11 @@ def export_excel(db: Session = Depends(get_db)):
     ws.auto_filter.ref = f"A1:{get_column_letter(len(col_headers))}1"
     wb.save(filepath)
 
-    return {"filepath": filepath, "total_rows": len(assets)}
+    return FileResponse(
+        filepath,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="assets.xlsx",
+    )
 
 
 # ── Maintenance Endpoints ──────────────────────────────────────────────
