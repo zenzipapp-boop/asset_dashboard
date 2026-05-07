@@ -247,7 +247,13 @@ def calc_gst_components(base_price: float, gst_mode: str, gst_place: str, gst_va
     cgst_rate = sgst_rate = igst_rate = 0.0
     cgst_amount = sgst_amount = igst_amount = 0.0
 
-    if gst_mode == "amount":
+    if gst_place == "vat":
+        # VAT: single-rate tax, no CGST/SGST/IGST split
+        if gst_mode == "amount":
+            gst_amount = float(gst_value or 0)
+        else:
+            gst_amount = base_price * (float(gst_value or 0) / 100)
+    elif gst_mode == "amount":
         gst_amount = float(gst_value or 0)
         if gst_place == "inter":
             igst_amount = gst_amount

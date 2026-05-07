@@ -838,14 +838,18 @@
                                 </div>
                             </div>
 
-                            <!-- GST SECTION -->
+                            <!-- TAX SECTION -->
                             <div style="background: #f9f9f9; padding: 16px; border: 2px solid #ddd; border-radius: 4px; margin: 20px 0;">
                                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                                    <input type="checkbox" id="gstApplicable" name="gst_applicable" onchange="toggleGST()">
-                                    <label style="margin: 0;">GST Applicable on Purchase</label>
+                                    <label style="margin: 0; font-weight: 600;">Tax on Purchase</label>
+                                    <select id="taxTypeSelect" onchange="toggleTaxType()" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                                        <option value="none">None</option>
+                                        <option value="gst">GST</option>
+                                        <option value="vat">VAT</option>
+                                    </select>
                                 </div>
 
-                                <div id="gstSection" style="display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div id="gstSection" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
                                     <div class="form-group">
                                         <label>GST Mode</label>
                                         <select id="gstModeSelect" onchange="updateGstModeLabel(); calculateAddGST()">
@@ -882,6 +886,28 @@
                                     <div class="form-group">
                                         <label>Total Value (₹)</label>
                                         <input type="text" id="totalValueDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                </div>
+
+                                <div id="vatSection" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <div class="form-group">
+                                        <label>VAT Mode</label>
+                                        <select id="vatModeSelect" onchange="updateVatModeLabel(); calculateAddVAT()">
+                                            <option value="percent">VAT %</option>
+                                            <option value="amount">Flat VAT Amount</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label id="vatValueLabel">VAT Rate (%)</label>
+                                        <input type="number" id="vatValueInput" step="0.01" value="5" oninput="calculateAddVAT()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>VAT Amount (₹)</label>
+                                        <input type="text" id="vatAmountDisplay" disabled placeholder="Auto-calculated">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Total Value (₹)</label>
+                                        <input type="text" id="vatTotalDisplay" disabled placeholder="Auto-calculated">
                                     </div>
                                 </div>
 
@@ -1017,14 +1043,18 @@
                     </div>
                 </div>
 
-                <!-- GST SECTION IN EDIT -->
+                <!-- TAX SECTION IN EDIT -->
                 <div style="background: #f9f9f9; padding: 16px; border: 2px solid #ddd; border-radius: 4px;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                        <input type="checkbox" id="editGstApplicable" name="gst_applicable" onchange="toggleEditGST()">
-                        <label style="margin: 0;">GST Applicable</label>
+                        <label style="margin: 0; font-weight: 600;">Tax on Purchase</label>
+                        <select id="editTaxTypeSelect" onchange="toggleEditTaxType()" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            <option value="none">None</option>
+                            <option value="gst">GST</option>
+                            <option value="vat">VAT</option>
+                        </select>
                     </div>
 
-                    <div id="editGstSection" style="display: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div id="editGstSection" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group">
                             <label>GST Mode</label>
                             <select id="editGstModeSelect" onchange="updateEditGstModeLabel(); calculateEditGST()">
@@ -1061,6 +1091,28 @@
                         <div class="form-group">
                             <label>Total Value (₹)</label>
                             <input type="text" id="editTotalValueDisplay" name="value" disabled>
+                        </div>
+                    </div>
+
+                    <div id="editVatSection" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label>VAT Mode</label>
+                            <select id="editVatModeSelect" onchange="updateEditVatModeLabel(); calculateEditVAT()">
+                                <option value="percent">VAT %</option>
+                                <option value="amount">Flat VAT Amount</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="editVatValueLabel">VAT Rate (%)</label>
+                            <input type="number" id="editVatValueInput" step="0.01" value="5" oninput="calculateEditVAT()">
+                        </div>
+                        <div class="form-group">
+                            <label>VAT Amount (₹)</label>
+                            <input type="text" id="editVatAmountDisplay" disabled placeholder="Auto-calculated">
+                        </div>
+                        <div class="form-group">
+                            <label>Total Value (₹)</label>
+                            <input type="text" id="editVatTotalDisplay" disabled placeholder="Auto-calculated">
                         </div>
                     </div>
 
@@ -1512,7 +1564,15 @@
             const dop = parseAssetDate(document.getElementById('dop_input').value);
             const endDate = getAssetAgeEndDate();
             document.getElementById('age_input').value = dop ? formatAssetAge(dop, endDate) : '';
-            calculateAddGST();
+            if (dop) {
+                const newType = dop < new Date(2017, 6, 1) ? 'vat' : 'gst';
+                document.getElementById('taxTypeSelect').value = newType;
+                toggleTaxType();
+            } else {
+                const tt = document.getElementById('taxTypeSelect').value;
+                if (tt === 'gst') calculateAddGST();
+                else if (tt === 'vat') calculateAddVAT();
+            }
         }
 
         function toggleDisposedFields() {
@@ -1666,18 +1726,38 @@
             updateAssetAge();
         }
 
-        function toggleGST() {
-            const checked = document.getElementById('gstApplicable').checked;
-            document.getElementById('gstSection').style.display = checked ? 'grid' : 'none';
-            if (checked) {
-                calculateAddGST();
-            }
+        function toggleTaxType() {
+            const type = document.getElementById('taxTypeSelect').value;
+            document.getElementById('gstSection').style.display = type === 'gst' ? 'grid' : 'none';
+            document.getElementById('vatSection').style.display = type === 'vat' ? 'grid' : 'none';
+            if (type === 'gst') calculateAddGST();
+            if (type === 'vat') calculateAddVAT();
         }
 
         function updateGstModeLabel() {
             const mode = document.getElementById('gstModeSelect').value;
             document.getElementById('gstValueLabel').textContent = mode === 'amount' ? 'GST Amount (₹)' : 'GST Rate (%)';
             document.getElementById('gstValueInput').placeholder = mode === 'amount' ? 'e.g. 9200' : '18';
+        }
+
+        function updateVatModeLabel() {
+            const mode = document.getElementById('vatModeSelect').value;
+            document.getElementById('vatValueLabel').textContent = mode === 'amount' ? 'VAT Amount (₹)' : 'VAT Rate (%)';
+            document.getElementById('vatValueInput').placeholder = mode === 'amount' ? 'e.g. 500' : '5';
+        }
+
+        function calculateAddVAT() {
+            const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
+            const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
+            const basePrice = quantity * pricePerUnit;
+            const vatMode = document.getElementById('vatModeSelect').value;
+            const vatInput = parseFloat(document.getElementById('vatValueInput').value) || 0;
+            const vatAmount = vatMode === 'amount' ? vatInput : basePrice * (vatInput / 100);
+            const totalValue = basePrice + vatAmount;
+            document.getElementById('vatAmountDisplay').value = vatAmount > 0 ? vatAmount.toFixed(2) : '';
+            document.getElementById('vatTotalDisplay').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('simpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('price_per_unit').dataset.basePrice = basePrice > 0 ? basePrice.toFixed(2) : '';
         }
 
         function calculateAddGST() {
@@ -1707,6 +1787,9 @@
         }
 
         function resetGSTFields() {
+            document.getElementById('taxTypeSelect').value = 'none';
+            document.getElementById('gstSection').style.display = 'none';
+            document.getElementById('vatSection').style.display = 'none';
             document.getElementById('gstModeSelect').value = 'percent';
             document.getElementById('gstValueInput').value = '18';
             document.getElementById('gstInterstateToggle').checked = false;
@@ -1715,6 +1798,10 @@
             document.getElementById('igstDisplay').value = '';
             document.getElementById('gstAmountDisplay').value = '';
             document.getElementById('totalValueDisplay').value = '';
+            document.getElementById('vatModeSelect').value = 'percent';
+            document.getElementById('vatValueInput').value = '5';
+            document.getElementById('vatAmountDisplay').value = '';
+            document.getElementById('vatTotalDisplay').value = '';
             document.getElementById('simpleValueInput').value = '';
             updateGstModeLabel();
         }
@@ -1739,7 +1826,15 @@
             const disposalDate = parseAssetDate(document.getElementById('editDisposalDateInput').value);
             const endDate = disposed && disposalDate ? disposalDate : new Date();
             document.getElementById('editAgeInput').value = dop ? formatAssetAge(dop, endDate) : '';
-            calculateEditGST();
+            if (dop) {
+                const newType = dop < new Date(2017, 6, 1) ? 'vat' : 'gst';
+                document.getElementById('editTaxTypeSelect').value = newType;
+                toggleEditTaxType();
+            } else {
+                const tt = document.getElementById('editTaxTypeSelect').value;
+                if (tt === 'gst') calculateEditGST();
+                else if (tt === 'vat') calculateEditVAT();
+            }
         }
 
         function updateEditGstModeLabel() {
@@ -1748,37 +1843,10 @@
             document.getElementById('editGstValueInput').placeholder = mode === 'amount' ? 'e.g. 9200' : '18';
         }
 
-        function toggleEditGST() {
-            const checked = document.getElementById('editGstApplicable').checked;
-            document.getElementById('editGstSection').style.display = checked ? 'grid' : 'none';
-            if (checked) {
-                calculateEditGST();
-            }
-        }
-
-        function calculateEditGST() {
-            const quantity = currentEditQuantity || 1;
-            const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
-            const basePrice = quantity * pricePerUnit;
-            const gstMode = document.getElementById('editGstModeSelect').value;
-            const interState = document.getElementById('editGstInterstateToggle').checked;
-            const gstInput = parseFloat(document.getElementById('editGstValueInput').value) || 0;
-            const gstAmount = gstMode === 'amount' ? gstInput : basePrice * (gstInput / 100);
-            const halfAmount = interState ? 0 : gstAmount / 2;
-            const cgstAmount = interState ? 0 : halfAmount;
-            const sgstAmount = interState ? 0 : halfAmount;
-            const igstAmount = interState ? gstAmount : 0;
-            const cgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${cgstAmount.toFixed(2)}`);
-            const sgstText = interState ? '0.00' : (gstMode === 'percent' ? `${(gstInput / 2).toFixed(2)}%` : `₹${sgstAmount.toFixed(2)}`);
-            const igstText = interState ? (gstMode === 'percent' ? `${gstInput.toFixed(2)}%` : `₹${igstAmount.toFixed(2)}`) : '0.00';
-            const totalValue = basePrice + gstAmount;
-
-            document.getElementById('editCgstDisplay').value = cgstText;
-            document.getElementById('editSgstDisplay').value = sgstText;
-            document.getElementById('editIgstDisplay').value = igstText;
-            document.getElementById('editGstAmountDisplay').value = gstAmount > 0 ? gstAmount.toFixed(2) : '';
-            document.getElementById('editTotalValueDisplay').value = totalValue > 0 ? totalValue.toFixed(2) : '';
-            document.getElementById('editSimpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+        function updateEditVatModeLabel() {
+            const mode = document.getElementById('editVatModeSelect').value;
+            document.getElementById('editVatValueLabel').textContent = mode === 'amount' ? 'VAT Amount (₹)' : 'VAT Rate (%)';
+            document.getElementById('editVatValueInput').placeholder = mode === 'amount' ? 'e.g. 500' : '5';
         }
 
         document.getElementById('assetForm').addEventListener('submit', async (e) => {
@@ -1794,13 +1862,13 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             data.quantity = parseInt(data.quantity);
-            data.gst_applicable = document.getElementById('gstApplicable').checked;
-            data.gst_mode = document.getElementById('gstModeSelect').value;
-            data.gst_place = document.getElementById('gstInterstateToggle').checked ? 'inter' : 'intra';
-
+            const taxType = document.getElementById('taxTypeSelect').value;
+            data.gst_applicable = taxType !== 'none';
             delete data.price_per_unit;
 
-            if (data.gst_applicable) {
+            if (taxType === 'gst') {
+                data.gst_mode = document.getElementById('gstModeSelect').value;
+                data.gst_place = document.getElementById('gstInterstateToggle').checked ? 'inter' : 'intra';
                 const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
                 const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
                 const basePrice = quantity * pricePerUnit;
@@ -1817,6 +1885,26 @@
                 data.cgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
                 data.sgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
                 data.igst_amount = data.gst_place === 'inter' ? gstAmount : 0;
+            } else if (taxType === 'vat') {
+                const vatMode = document.getElementById('vatModeSelect').value;
+                const quantity = parseFloat(document.getElementById('quantity_input').value) || 1;
+                const pricePerUnit = parseFloat(document.getElementById('price_per_unit').value) || 0;
+                const basePrice = quantity * pricePerUnit;
+                const vatInput = parseFloat(document.getElementById('vatValueInput').value) || 0;
+                const vatAmount = vatMode === 'amount' ? vatInput : basePrice * (vatInput / 100);
+
+                data.gst_mode = vatMode;
+                data.gst_place = 'vat';
+                data.base_price = basePrice;
+                data.gst_rate = vatMode === 'percent' ? vatInput : 0;
+                data.gst_amount = vatAmount;
+                data.value = basePrice + vatAmount;
+                data.cgst_rate = 0;
+                data.sgst_rate = 0;
+                data.igst_rate = 0;
+                data.cgst_amount = 0;
+                data.sgst_amount = 0;
+                data.igst_amount = 0;
             } else {
                 data.value = parseFloat(data.value) || null;
                 data.base_price = data.value;
@@ -1879,20 +1967,29 @@
                 document.getElementById('editForm').vendor.value = asset.vendor;
                 document.getElementById('editPricePerUnitInput').value = asset.quantity ? ((asset.base_price || asset.value || 0) / asset.quantity).toFixed(2) : (asset.base_price || asset.value || '');
 
-                // Handle GST
-                document.getElementById('editGstApplicable').checked = asset.gst_applicable || false;
-                if (asset.gst_applicable) {
+                // Handle tax type (GST or VAT)
+                const isVat = asset.gst_applicable && (asset.gst_place || '') === 'vat';
+                const isGst = asset.gst_applicable && !isVat;
+                document.getElementById('editTaxTypeSelect').value = isGst ? 'gst' : isVat ? 'vat' : 'none';
+
+                if (isGst) {
                     document.getElementById('editGstModeSelect').value = asset.gst_mode || 'percent';
                     document.getElementById('editGstInterstateToggle').checked = (asset.gst_place || 'intra') === 'inter';
                     document.getElementById('editGstValueInput').value = asset.gst_mode === 'amount' ? (asset.gst_amount || '') : (asset.gst_rate || '18');
                     document.getElementById('editGstAmountDisplay').value = asset.gst_amount || '0';
                     document.getElementById('editTotalValueDisplay').value = asset.value || '';
+                } else if (isVat) {
+                    document.getElementById('editVatModeSelect').value = asset.gst_mode || 'percent';
+                    document.getElementById('editVatValueInput').value = asset.gst_mode === 'amount' ? (asset.gst_amount || '') : (asset.gst_rate || '5');
+                    document.getElementById('editVatAmountDisplay').value = asset.gst_amount || '0';
+                    document.getElementById('editVatTotalDisplay').value = asset.value || '';
                 } else {
                     document.getElementById('editSimpleValueInput').value = asset.value || '';
                 }
                 toggleEditDisposedFields();
                 updateEditGstModeLabel();
-                toggleEditGST();
+                updateEditVatModeLabel();
+                toggleEditTaxType();
                 document.getElementById('editModal').classList.add('active');
             } catch (err) {
                 console.error('Error loading asset:', err);
@@ -1903,13 +2000,13 @@
             document.getElementById('editModal').classList.remove('active');
         }
 
-        function toggleEditGST() {
-            const checked = document.getElementById('editGstApplicable').checked;
-            document.getElementById('editGstSection').style.display = checked ? 'grid' : 'none';
-            document.getElementById('editNoGstSection').style.display = checked ? 'none' : 'block';
-            if (checked) {
-                calculateEditGST();
-            }
+        function toggleEditTaxType() {
+            const type = document.getElementById('editTaxTypeSelect').value;
+            document.getElementById('editGstSection').style.display = type === 'gst' ? 'grid' : 'none';
+            document.getElementById('editVatSection').style.display = type === 'vat' ? 'grid' : 'none';
+            document.getElementById('editNoGstSection').style.display = type === 'none' ? 'block' : 'none';
+            if (type === 'gst') calculateEditGST();
+            if (type === 'vat') calculateEditVAT();
         }
 
         function calculateEditGST() {
@@ -1937,19 +2034,32 @@
             document.getElementById('editSimpleValueInput').value = totalValue.toFixed(2);
         }
 
+        function calculateEditVAT() {
+            const quantity = currentEditQuantity || 1;
+            const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+            const basePrice = quantity * pricePerUnit;
+            const vatMode = document.getElementById('editVatModeSelect').value;
+            const vatInput = parseFloat(document.getElementById('editVatValueInput').value) || 0;
+            const vatAmount = vatMode === 'amount' ? vatInput : basePrice * (vatInput / 100);
+            const totalValue = basePrice + vatAmount;
+            document.getElementById('editVatAmountDisplay').value = vatAmount > 0 ? vatAmount.toFixed(2) : '';
+            document.getElementById('editVatTotalDisplay').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+            document.getElementById('editSimpleValueInput').value = totalValue > 0 ? totalValue.toFixed(2) : '';
+        }
+
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             delete data.price_per_unit;
 
-            const gstApplicable = document.getElementById('editGstApplicable').checked;
-            data.gst_applicable = gstApplicable;
-            data.gst_mode = document.getElementById('editGstModeSelect').value;
-            data.gst_place = document.getElementById('editGstInterstateToggle').checked ? 'inter' : 'intra';
+            const editTaxType = document.getElementById('editTaxTypeSelect').value;
+            data.gst_applicable = editTaxType !== 'none';
             data.disposed = document.getElementById('editDisposedToggle').checked;
 
-            if (gstApplicable) {
+            if (editTaxType === 'gst') {
+                data.gst_mode = document.getElementById('editGstModeSelect').value;
+                data.gst_place = document.getElementById('editGstInterstateToggle').checked ? 'inter' : 'intra';
                 const quantity = currentEditQuantity || 1;
                 const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
                 const basePrice = quantity * pricePerUnit;
@@ -1966,6 +2076,26 @@
                 data.cgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
                 data.sgst_amount = data.gst_place === 'inter' ? 0 : (gstAmount / 2);
                 data.igst_amount = data.gst_place === 'inter' ? gstAmount : 0;
+            } else if (editTaxType === 'vat') {
+                const vatMode = document.getElementById('editVatModeSelect').value;
+                const quantity = currentEditQuantity || 1;
+                const pricePerUnit = parseFloat(document.getElementById('editPricePerUnitInput').value) || 0;
+                const basePrice = quantity * pricePerUnit;
+                const vatInput = parseFloat(document.getElementById('editVatValueInput').value) || 0;
+                const vatAmount = vatMode === 'amount' ? vatInput : basePrice * (vatInput / 100);
+
+                data.gst_mode = vatMode;
+                data.gst_place = 'vat';
+                data.base_price = basePrice;
+                data.gst_rate = vatMode === 'percent' ? vatInput : 0;
+                data.gst_amount = vatAmount;
+                data.value = basePrice + vatAmount;
+                data.cgst_rate = 0;
+                data.sgst_rate = 0;
+                data.igst_rate = 0;
+                data.cgst_amount = 0;
+                data.sgst_amount = 0;
+                data.igst_amount = 0;
             } else {
                 data.value = parseFloat(data.value) || null;
                 delete data.base_price;
