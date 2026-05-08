@@ -16,7 +16,7 @@ print("=" * 60 + "\n")
 print("[*] Checking for updates from GitHub...")
 try:
     result = subprocess.run(
-        ["git", "pull"],
+        ["git", "pull", "origin", "main"],
         capture_output=True,
         text=True,
         timeout=10
