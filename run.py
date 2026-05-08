@@ -5,11 +5,35 @@ import subprocess
 import sys
 import webbrowser
 import time
+import os
 from pathlib import Path
 
 print("\n" + "=" * 60)
 print("  ASSET AUDIT SYSTEM - STARTUP")
 print("=" * 60 + "\n")
+
+# Git: Fetch latest updates from GitHub
+print("[*] Checking for updates from GitHub...")
+try:
+    result = subprocess.run(
+        ["git", "pull"],
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    
+    if result.returncode == 0:
+        if "Already up to date" not in result.stdout:
+            print("[OK] Updates pulled! Restarting with new version...")
+            print()
+            # Restart the script with updated code
+            os.execv(sys.executable, [sys.executable, __file__])
+        else:
+            print("[OK] Already up to date\n")
+    else:
+        print("[!] Git pull failed (no remote configured?). Continuing anyway...\n")
+except Exception as e:
+    print(f"[!] Could not check for updates: {e}\n")
 
 # Install dependencies
 print("[*] Installing dependencies...")
