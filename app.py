@@ -76,6 +76,12 @@ def ensure_maintenance_log_columns():
 ensure_maintenance_log_columns()
 
 
+def ensure_schema():
+    """Keep SQLite tables aligned with the current SQLAlchemy models."""
+    ensure_asset_columns()
+    ensure_maintenance_log_columns()
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -238,7 +244,16 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def on_startup():
+    ensure_schema()
+
+
 # ── Routes ──────────────────────────────────────────────────────────────────────
+
+
+def maintenance_schema_dependency():
+    ensure_maintenance_log_columns()
 
 @app.get("/")
 def serve_frontend():
@@ -631,6 +646,7 @@ def export_excel(db: Session = Depends(get_db)):
 def list_maintenance(
     asset_id: int = Query(None),
     status: str = Query(None),
+    _: None = Depends(maintenance_schema_dependency),
     db: Session = Depends(get_db),
 ):
     """List maintenance entries with optional filters."""
@@ -646,7 +662,11 @@ def list_maintenance(
 
 
 @app.get("/api/assets/{asset_id}/maintenance")
-def get_asset_maintenance(asset_id: int, db: Session = Depends(get_db)):
+def get_asset_maintenance(
+    asset_id: int,
+    _: None = Depends(maintenance_schema_dependency),
+    db: Session = Depends(get_db),
+):
     """Get maintenance entries for a specific asset."""
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
     if not asset:
@@ -657,7 +677,11 @@ def get_asset_maintenance(asset_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/maintenance", response_model=MaintenanceResponse)
-def create_maintenance(entry: MaintenanceCreate, db: Session = Depends(get_db)):
+def create_maintenance(
+    entry: MaintenanceCreate,
+    _: None = Depends(maintenance_schema_dependency),
+    db: Session = Depends(get_db),
+):
     """Create a new maintenance entry."""
     try:
         asset = db.query(Asset).filter(Asset.id == entry.asset_id).first()
@@ -685,7 +709,12 @@ def create_maintenance(entry: MaintenanceCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/maintenance/{entry_id}", response_model=MaintenanceResponse)
-def update_maintenance(entry_id: int, entry_update: MaintenanceUpdate, db: Session = Depends(get_db)):
+def update_maintenance(
+    entry_id: int,
+    entry_update: MaintenanceUpdate,
+    _: None = Depends(maintenance_schema_dependency),
+    db: Session = Depends(get_db),
+):
     """Update a maintenance entry."""
     try:
         db_entry = db.query(MaintenanceLog).filter(MaintenanceLog.id == entry_id).first()
@@ -706,7 +735,11 @@ def update_maintenance(entry_id: int, entry_update: MaintenanceUpdate, db: Sessi
 
 
 @app.delete("/api/maintenance/{entry_id}")
-def delete_maintenance(entry_id: int, db: Session = Depends(get_db)):
+def delete_maintenance(
+    entry_id: int,
+    _: None = Depends(maintenance_schema_dependency),
+    db: Session = Depends(get_db),
+):
     """Delete a maintenance entry."""
     try:
         db_entry = db.query(MaintenanceLog).filter(MaintenanceLog.id == entry_id).first()
