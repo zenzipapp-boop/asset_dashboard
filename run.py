@@ -12,6 +12,9 @@ print("\n" + "=" * 60)
 print("  ASSET AUDIT SYSTEM - STARTUP")
 print("=" * 60 + "\n")
 
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_PATH = BASE_DIR / "assets.db"
+
 # Git: Fetch latest updates from GitHub
 print("[*] Checking for updates from GitHub...")
 try:
@@ -40,7 +43,7 @@ print("[*] Installing dependencies...")
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"])
 
 # Check database exists
-if not Path("assets.db").exists():
+if not DATABASE_PATH.exists():
     print("[!] Warning: assets.db not found. Please ensure the database file is present.")
     sys.exit(1)
 
