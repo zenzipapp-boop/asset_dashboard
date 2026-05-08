@@ -59,6 +59,23 @@ def ensure_asset_columns():
 ensure_asset_columns()
 
 
+def ensure_maintenance_log_columns():
+    """Add missing columns to maintenance_logs table if they don't exist."""
+    required_columns = {
+        "scrap_value": "FLOAT DEFAULT 0",
+    }
+
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(maintenance_logs)").fetchall()}
+        for column_name, column_sql in required_columns.items():
+            if column_name not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE maintenance_logs ADD COLUMN {column_name} {column_sql}")
+        conn.commit()
+
+
+ensure_maintenance_log_columns()
+
+
 def get_db():
     db = SessionLocal()
     try:
