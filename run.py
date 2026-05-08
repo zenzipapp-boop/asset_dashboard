@@ -42,4 +42,4 @@ try:
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
 except KeyboardInterrupt:
-    print("\n\n[OK] Server stopped\n")
+    print("\n\n[OK] Servers  stopped\n")
