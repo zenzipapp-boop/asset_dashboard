@@ -548,6 +548,135 @@
             display: block;
         }
 
+        /* ─── AI DASHBOARD ───────────────────────────────────────────── */
+        .ai-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+            gap: 12px;
+            padding: 18px;
+        }
+
+        .ai-panel {
+            background: linear-gradient(180deg, #fffdf8 0%, #f6f9ff 100%);
+            border: 2px solid #1f1f1f;
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+        }
+
+        .ai-panel.alt {
+            background: linear-gradient(180deg, #f8fcff 0%, #fffaf5 100%);
+        }
+
+        .ai-header {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .ai-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .ai-subtitle {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .ai-card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .ai-card {
+            border: 1.5px solid #d6d6d6;
+            border-radius: 8px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .ai-card-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 3px;
+        }
+
+        .ai-card-label {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .ai-chatbox textarea {
+            width: 100%;
+            min-height: 140px;
+            resize: vertical;
+            border-radius: 8px;
+            border-width: 2px;
+            padding: 10px 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .ai-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .ai-pill {
+            border: 1px solid #b6b6b6;
+            background: #fff;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .ai-answer {
+            margin-top: 12px;
+            background: #fff;
+            border: 1px solid #d8d8d8;
+            border-left: 4px solid #1f4e79;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .ai-answer-text {
+            font-size: 13px;
+            line-height: 1.55;
+            color: #222;
+        }
+
+        .ai-highlights {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .ai-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-list-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ececec;
+            font-size: 11px;
+            color: #333;
+        }
+
         /* ─── RESPONSIVE ──────────────────────────────────────────────── */
         @media (max-width: 768px) {
             .sidebar {
@@ -583,6 +712,14 @@
             .chart-panel {
                 min-width: auto;
             }
+
+            .ai-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .ai-card-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -610,6 +747,10 @@
                 <div class="nav-item" onclick="switchTab('maintenance')">
                     <span class="nav-icon">🔧</span>
                     <span class="nav-label">Maintenance</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('ai')">
+                    <span class="nav-icon">🤖</span>
+                    <span class="nav-label">AI</span>
                 </div>
                 <div class="nav-item" onclick="switchTab('export')">
                     <span class="nav-icon">📥</span>
@@ -970,6 +1111,48 @@
                     </div>
                 </div>
             </div>
+
+            <!-- AI -->
+            <div id="ai" class="content-section">
+                <div class="header">
+                    <div class="header-title">AI Assistant</div>
+                    <div class="header-controls">
+                        <button class="btn btn-primary btn-small" onclick="loadAiPage()">Refresh AI</button>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="ai-layout">
+                        <div class="ai-panel ai-chatbox">
+                            <div class="ai-header">
+                                <div class="ai-title">Ask the data</div>
+                                <div class="ai-subtitle">This local assistant reads the live SQLite data and answers questions about assets, maintenance, risk, value, locations, and vendors.</div>
+                            </div>
+                            <textarea id="aiQuestion" placeholder="Try: Which assets are most at risk? Or: Summarize maintenance spend by asset."></textarea>
+                            <div class="ai-controls">
+                                <button class="btn btn-primary" onclick="submitAiQuestion()">Ask AI</button>
+                                <button class="ai-pill" type="button" onclick="useAiPrompt('Which assets are most at risk?')">Risk check</button>
+                                <button class="ai-pill" type="button" onclick="useAiPrompt('What is the total asset value?')">Asset value</button>
+                                <button class="ai-pill" type="button" onclick="useAiPrompt('Show the latest maintenance activity')">Latest maintenance</button>
+                            </div>
+                            <div id="aiAnswer" class="ai-answer">
+                                <div class="ai-answer-text">Load the AI page to generate a live snapshot of the current data.</div>
+                                <div id="aiHighlights" class="ai-highlights"></div>
+                            </div>
+                        </div>
+                        <div class="ai-panel alt">
+                            <div class="ai-header">
+                                <div class="ai-title">Live snapshot</div>
+                                <div class="ai-subtitle">Current data pulled from assets and maintenance logs.</div>
+                            </div>
+                            <div id="aiSummaryCards" class="ai-card-grid"></div>
+                            <div style="margin-top: 14px;">
+                                <div class="panel-title">Quick signals</div>
+                                <div id="aiInsights" class="ai-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1231,6 +1414,7 @@
             if (tab === 'dashboard') loadDashboard();
             if (tab === 'assets') loadAssets();
             if (tab === 'maintenance') loadMaintenanceAssets();
+            if (tab === 'ai') loadAiPage();
         }
 
         async function loadOptions() {
@@ -1345,6 +1529,92 @@
                 ).join('');
             } catch (err) {
                 console.error('Error loading dashboard:', err);
+            }
+        }
+
+        function renderAiSummary(data) {
+            document.getElementById('aiSummaryCards').innerHTML = `
+                <div class="ai-card">
+                    <div class="ai-card-value">${data.total_assets}</div>
+                    <div class="ai-card-label">Total assets</div>
+                </div>
+                <div class="ai-card">
+                    <div class="ai-card-value">Rs. ${Number(data.total_value || 0).toLocaleString('en-IN')}</div>
+                    <div class="ai-card-label">Total asset value</div>
+                </div>
+                <div class="ai-card">
+                    <div class="ai-card-value">${data.maintenance_count}</div>
+                    <div class="ai-card-label">Maintenance entries</div>
+                </div>
+                <div class="ai-card">
+                    <div class="ai-card-value">${data.risk_count}</div>
+                    <div class="ai-card-label">Risk candidates</div>
+                </div>
+            `;
+
+            const insightRows = [
+                [`Top type`, Object.entries(data.type_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Top location`, Object.entries(data.location_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Top vendor`, Object.entries(data.vendor_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Maintenance spend`, `Rs. ${Number(data.total_maintenance_cost || 0).toLocaleString('en-IN')}`],
+            ];
+
+            document.getElementById('aiInsights').innerHTML = insightRows.map(([label, value]) => `
+                <div class="ai-list-item">
+                    <span>${label}</span>
+                    <strong>${value}</strong>
+                </div>
+            `).join('');
+
+            const answerText = data.risky_assets && data.risky_assets.length
+                ? `The strongest risk signals are ${data.risky_assets.slice(0, 3).map(item => `${item.name} (${item.status})`).join('; ')}.`
+                : 'The current dataset does not show many obvious risk clusters.';
+
+            document.getElementById('aiAnswer').innerHTML = `
+                <div class="ai-answer-text">${answerText}</div>
+                <div id="aiHighlights" class="ai-highlights">${(data.top_assets || []).slice(0, 3).map(item => `<span class="ai-pill">${item.name}</span>`).join('')}</div>
+            `;
+        }
+
+        async function loadAiPage() {
+            try {
+                const res = await fetch(`${API_URL}/ai/summary`);
+                const data = await res.json();
+                renderAiSummary(data);
+            } catch (err) {
+                console.error('Error loading AI summary:', err);
+                document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">Unable to load the AI snapshot right now.</div>';
+            }
+        }
+
+        function useAiPrompt(question) {
+            document.getElementById('aiQuestion').value = question;
+            submitAiQuestion();
+        }
+
+        async function submitAiQuestion() {
+            const question = document.getElementById('aiQuestion').value.trim();
+            if (!question) {
+                return;
+            }
+
+            document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">Thinking through the live data...</div>';
+
+            try {
+                const res = await fetch(`${API_URL}/ai/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                const data = await res.json();
+                const highlights = (data.highlights || []).map(item => `<span class="ai-pill">${item}</span>`).join('');
+                document.getElementById('aiAnswer').innerHTML = `
+                    <div class="ai-answer-text">${data.answer}</div>
+                    <div class="ai-highlights">${highlights}</div>
+                `;
+            } catch (err) {
+                console.error('Error asking AI:', err);
+                document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">The AI assistant could not answer that right now.</div>';
             }
         }
 

@@ -2,6 +2,7 @@
 
 import os
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -231,6 +232,10 @@ class MaintenanceResponse(BaseModel):
     updated_at: datetime
 
 
+class AIQueryRequest(BaseModel):
+    question: str
+
+
 # FastAPI app
 app = FastAPI(title="Asset Audit System", version="1.0.0")
 
@@ -312,6 +317,206 @@ def calc_gst_components(base_price: float, gst_mode: str, gst_place: str, gst_va
         "cgst_amount": cgst_amount,
         "sgst_amount": sgst_amount,
         "igst_amount": igst_amount,
+    }
+
+
+def format_currency(value: float) -> str:
+    return f"Rs. {float(value or 0):,.2f}"
+
+
+def build_ai_snapshot(db: Session):
+    assets = db.query(Asset).all()
+    maintenance_entries = db.query(MaintenanceLog).order_by(MaintenanceLog.created_at.desc()).all()
+
+    status_counts = Counter((asset.status or "Unknown") for asset in assets)
+    type_counts = Counter((asset.asset_type or "Unknown") for asset in assets)
+    location_counts = Counter((asset.location or "Unknown") for asset in assets)
+    vendor_counts = Counter((asset.vendor or "Unknown") for asset in assets)
+    maintenance_by_asset = Counter(entry.asset_id for entry in maintenance_entries)
+
+    total_value = sum(float(asset.value or 0) for asset in assets)
+    total_maintenance_cost = sum(float(entry.cost or 0) for entry in maintenance_entries)
+    total_scrap_value = sum(float(entry.scrap_value or 0) for entry in maintenance_entries)
+
+    asset_by_id = {asset.id: asset for asset in assets}
+    risky_assets = []
+    for asset_id, count in maintenance_by_asset.most_common():
+        asset = asset_by_id.get(asset_id)
+        if not asset:
+            continue
+        if count >= 2 or (asset.status or "") in {"Non-Functional", "Condemned"}:
+            risky_assets.append(
+                {
+                    "name": asset.asset_name,
+                    "status": asset.status,
+                    "maintenance_count": count,
+                    "value": float(asset.value or 0),
+                }
+            )
+
+    top_assets = sorted(assets, key=lambda asset: float(asset.value or 0), reverse=True)[:5]
+    recent_maintenance = maintenance_entries[:5]
+
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
+        "total_assets": len(assets),
+        "total_value": float(total_value),
+        "status_counts": dict(status_counts),
+        "type_counts": dict(type_counts.most_common(8)),
+        "location_counts": dict(location_counts.most_common(8)),
+        "vendor_counts": dict(vendor_counts.most_common(8)),
+        "maintenance_count": len(maintenance_entries),
+        "total_maintenance_cost": float(total_maintenance_cost),
+        "total_scrap_value": float(total_scrap_value),
+        "risk_count": len(risky_assets),
+        "risky_assets": risky_assets[:5],
+        "top_assets": [
+            {
+                "name": asset.asset_name,
+                "value": float(asset.value or 0),
+                "status": asset.status,
+            }
+            for asset in top_assets
+        ],
+        "recent_maintenance": [
+            {
+                "asset_name": asset_by_id.get(entry.asset_id).asset_name if asset_by_id.get(entry.asset_id) else f"Asset #{entry.asset_id}",
+                "entry_type": entry.entry_type,
+                "date": entry.date,
+                "status": entry.status,
+                "cost": float(entry.cost or 0),
+                "scrap_value": float(entry.scrap_value or 0),
+                "technician": entry.technician,
+            }
+            for entry in recent_maintenance
+        ],
+    }
+
+
+def compose_ai_answer(question: str, snapshot: dict) -> dict:
+    normalized = (question or "").strip().lower()
+
+    if not normalized:
+        return {
+            "answer": "Ask me about assets, maintenance, risk, value, location, or status. I’ll answer using the live database.",
+            "highlights": [
+                f"{snapshot['total_assets']} assets in inventory",
+                f"{snapshot['maintenance_count']} maintenance entries",
+            ],
+        }
+
+    if any(word in normalized for word in ["hello", "hi", "hey", "start"]):
+        return {
+            "answer": "I'm ready. Ask about totals, expensive assets, maintenance, risky items, or where assets are concentrated.",
+            "highlights": [
+                f"Top value asset: {snapshot['top_assets'][0]['name']}" if snapshot["top_assets"] else "No assets available",
+                f"Risk items: {snapshot['risk_count']}",
+            ],
+        }
+
+    if any(word in normalized for word in ["risk", "broken", "problem", "issue", "condemned", "non-functional"]):
+        risky_assets = snapshot["risky_assets"]
+        if risky_assets:
+            details = "; ".join(
+                f"{item['name']} ({item['status']}, {item['maintenance_count']} maintenance entries)"
+                for item in risky_assets
+            )
+            return {
+                "answer": f"These are the main risk candidates right now: {details}.",
+                "highlights": [f"{snapshot['risk_count']} risk candidates detected"],
+            }
+        return {
+            "answer": "I don’t see any obvious high-risk assets yet. The inventory is mostly clean from a maintenance perspective.",
+            "highlights": ["No major risk patterns detected"],
+        }
+
+    if any(word in normalized for word in ["maintenance", "repair", "service", "inspection", "scrap"]):
+        recent = snapshot["recent_maintenance"]
+        if recent:
+            details = "; ".join(
+                f"{item['asset_name']} - {item['entry_type']} on {item['date']}"
+                for item in recent[:3]
+            )
+            return {
+                "answer": (
+                    f"There are {snapshot['maintenance_count']} maintenance records. Total spend is {format_currency(snapshot['total_maintenance_cost'])} "
+                    f"and scrap value totals {format_currency(snapshot['total_scrap_value'])}. Recent activity: {details}."
+                ),
+                "highlights": [
+                    f"{snapshot['maintenance_count']} entries",
+                    f"Spend {format_currency(snapshot['total_maintenance_cost'])}",
+                ],
+            }
+        return {
+            "answer": "There are no maintenance entries yet.",
+            "highlights": ["No maintenance records found"],
+        }
+
+    if any(word in normalized for word in ["value", "cost", "worth", "expensive", "expensive assets", "top assets"]):
+        top_assets = snapshot["top_assets"]
+        if top_assets:
+            details = "; ".join(f"{item['name']} ({format_currency(item['value'])})" for item in top_assets[:3])
+            return {
+                "answer": f"Total asset value is {format_currency(snapshot['total_value'])}. Top value items: {details}.",
+                "highlights": [f"Total value {format_currency(snapshot['total_value'])}"],
+            }
+        return {
+            "answer": "I don’t have any assets to value yet.",
+            "highlights": ["No assets available"],
+        }
+
+    if any(word in normalized for word in ["location", "where", "sites", "office"]):
+        top_locations = list(snapshot["location_counts"].items())[:3]
+        if top_locations:
+            details = "; ".join(f"{name} ({count})" for name, count in top_locations)
+            return {
+                "answer": f"Assets are concentrated in: {details}.",
+                "highlights": [f"{name}: {count}" for name, count in top_locations],
+            }
+
+    if any(word in normalized for word in ["type", "laptop", "desktop", "tablet", "printer"]):
+        top_types = list(snapshot["type_counts"].items())[:3]
+        if top_types:
+            details = "; ".join(f"{name} ({count})" for name, count in top_types)
+            return {
+                "answer": f"Asset types are led by: {details}.",
+                "highlights": [f"{name}: {count}" for name, count in top_types],
+            }
+
+    if any(word in normalized for word in ["vendor", "supplier"]):
+        top_vendors = list(snapshot["vendor_counts"].items())[:3]
+        if top_vendors:
+            details = "; ".join(f"{name} ({count})" for name, count in top_vendors)
+            return {
+                "answer": f"Top vendors in the data are: {details}.",
+                "highlights": [f"{name}: {count}" for name, count in top_vendors],
+            }
+
+    if any(word in normalized for word in ["status", "functional", "condemned", "non-functional"]):
+        counts = snapshot["status_counts"]
+        functional = counts.get("Functional", 0)
+        non_functional = counts.get("Non-Functional", 0)
+        condemned = counts.get("Condemned", 0)
+        return {
+            "answer": (
+                f"Status breakdown: {functional} Functional, {non_functional} Non-Functional, and {condemned} Condemned assets."
+            ),
+            "highlights": [
+                f"Functional: {functional}",
+                f"Non-Functional: {non_functional}",
+                f"Condemned: {condemned}",
+            ],
+        }
+
+    return {
+        "answer": (
+            f"I found {snapshot['total_assets']} assets worth {format_currency(snapshot['total_value'])}. "
+            f"Try asking about maintenance, risk, value, locations, vendors, or status for a sharper answer."
+        ),
+        "highlights": [
+            f"{snapshot['total_assets']} assets",
+            f"{snapshot['maintenance_count']} maintenance records",
+        ],
     }
 
 
@@ -561,6 +766,26 @@ def get_options(db: Session = Depends(get_db)):
             "purchased_from": sorted(purchased_from),
             "statuses": ["Functional", "Non-Functional", "Condemned"],
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@app.get("/api/ai/summary")
+def get_ai_summary(db: Session = Depends(get_db)):
+    """Get a compact live snapshot for the AI dashboard."""
+    try:
+        snapshot = build_ai_snapshot(db)
+        return snapshot
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@app.post("/api/ai/query")
+def ask_ai(payload: AIQueryRequest, db: Session = Depends(get_db)):
+    """Answer a question using lightweight local logic over the current data."""
+    try:
+        snapshot = build_ai_snapshot(db)
+        return compose_ai_answer(payload.question, snapshot)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
