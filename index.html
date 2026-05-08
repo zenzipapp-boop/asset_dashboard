@@ -1125,12 +1125,12 @@
                         <div class="ai-panel ai-chatbox">
                             <div class="ai-header">
                                 <div class="ai-title">Ask the data</div>
-                                <div class="ai-subtitle">This local assistant reads the live SQLite data and answers questions about assets, maintenance, risk, value, locations, and vendors.</div>
+                                <div class="ai-subtitle">This local assistant reads the live SQLite data and answers questions about assets, maintenance, items that need attention, value, locations, and vendors.</div>
                             </div>
-                            <textarea id="aiQuestion" placeholder="Try: Which assets are most at risk? Or: Summarize maintenance spend by asset."></textarea>
+                            <textarea id="aiQuestion" placeholder="Try: Which assets need attention most? Or: Summarize maintenance spend by asset."></textarea>
                             <div class="ai-controls">
                                 <button class="btn btn-primary" onclick="submitAiQuestion()">Ask AI</button>
-                                <button class="ai-pill" type="button" onclick="useAiPrompt('Which assets are most at risk?')">Risk check</button>
+                                <button class="ai-pill" type="button" onclick="useAiPrompt('Which assets need attention most?')">Attention check</button>
                                 <button class="ai-pill" type="button" onclick="useAiPrompt('What is the total asset value?')">Asset value</button>
                                 <button class="ai-pill" type="button" onclick="useAiPrompt('Show the latest maintenance activity')">Latest maintenance</button>
                             </div>
@@ -1567,8 +1567,8 @@
             `).join('');
 
             const answerText = data.risky_assets && data.risky_assets.length
-                ? `The strongest risk signals are ${data.risky_assets.slice(0, 3).map(item => `${item.name} (${item.status})`).join('; ')}.`
-                : 'The current dataset does not show many obvious risk clusters.';
+                ? `These are the assets most likely to need attention: ${data.risky_assets.slice(0, 3).map(item => `${item.name} (${item.status})`).join('; ')}.`
+                : 'The current dataset does not show many obvious maintenance risk clusters.';
 
             document.getElementById('aiAnswer').innerHTML = `
                 <div class="ai-answer-text">${answerText}</div>
