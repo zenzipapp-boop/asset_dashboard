@@ -4,6 +4,7 @@ import os
 import sys
 from collections import Counter
 from datetime import datetime
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -324,6 +325,16 @@ def format_currency(value: float) -> str:
     return f"Rs. {float(value or 0):,.2f}"
 
 
+def matches_any_term(text: str, terms: list[str]) -> bool:
+    for term in terms:
+        if " " in term or "-" in term:
+            if term in text:
+                return True
+        elif re.search(rf"\b{re.escape(term)}\b", text):
+            return True
+    return False
+
+
 def build_ai_snapshot(db: Session):
     assets = db.query(Asset).all()
     maintenance_entries = db.query(MaintenanceLog).order_by(MaintenanceLog.created_at.desc()).all()
@@ -395,26 +406,27 @@ def build_ai_snapshot(db: Session):
 
 def compose_ai_answer(question: str, snapshot: dict) -> dict:
     normalized = (question or "").strip().lower()
+    risk_definition = "In this app, 'at risk' means an asset is marked Non-Functional or Condemned, or it has 2+ maintenance entries."
 
     if not normalized:
         return {
-            "answer": "Ask me about assets, maintenance, risk, value, location, or status. I’ll answer using the live database.",
+            "answer": "Ask me about assets, maintenance, items needing attention, value, location, or status. I’ll answer using the live database.",
             "highlights": [
                 f"{snapshot['total_assets']} assets in inventory",
                 f"{snapshot['maintenance_count']} maintenance entries",
             ],
         }
 
-    if any(word in normalized for word in ["hello", "hi", "hey", "start"]):
+    if matches_any_term(normalized, ["hello", "hi", "hey", "start"]):
         return {
-            "answer": "I'm ready. Ask about totals, expensive assets, maintenance, risky items, or where assets are concentrated.",
+            "answer": "I'm ready. Ask about totals, expensive assets, maintenance, items needing attention, or where assets are concentrated.",
             "highlights": [
                 f"Top value asset: {snapshot['top_assets'][0]['name']}" if snapshot["top_assets"] else "No assets available",
                 f"Risk items: {snapshot['risk_count']}",
             ],
         }
 
-    if any(word in normalized for word in ["risk", "broken", "problem", "issue", "condemned", "non-functional"]):
+    if matches_any_term(normalized, ["risk", "broken", "problem", "issue", "condemned", "non-functional"]):
         risky_assets = snapshot["risky_assets"]
         if risky_assets:
             details = "; ".join(
@@ -422,15 +434,15 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
                 for item in risky_assets
             )
             return {
-                "answer": f"These are the main risk candidates right now: {details}.",
+                "answer": f"{risk_definition} The main attention candidates right now are: {details}.",
                 "highlights": [f"{snapshot['risk_count']} risk candidates detected"],
             }
         return {
-            "answer": "I don’t see any obvious high-risk assets yet. The inventory is mostly clean from a maintenance perspective.",
+            "answer": f"{risk_definition} I don't see any obvious attention hotspots yet. The inventory is mostly clean from a maintenance perspective.",
             "highlights": ["No major risk patterns detected"],
         }
 
-    if any(word in normalized for word in ["maintenance", "repair", "service", "inspection", "scrap"]):
+    if matches_any_term(normalized, ["maintenance", "repair", "service", "inspection", "scrap"]):
         recent = snapshot["recent_maintenance"]
         if recent:
             details = "; ".join(
@@ -452,7 +464,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
             "highlights": ["No maintenance records found"],
         }
 
-    if any(word in normalized for word in ["value", "cost", "worth", "expensive", "expensive assets", "top assets"]):
+    if matches_any_term(normalized, ["value", "cost", "worth", "expensive", "expensive assets", "top assets"]):
         top_assets = snapshot["top_assets"]
         if top_assets:
             details = "; ".join(f"{item['name']} ({format_currency(item['value'])})" for item in top_assets[:3])
@@ -465,7 +477,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
             "highlights": ["No assets available"],
         }
 
-    if any(word in normalized for word in ["location", "where", "sites", "office"]):
+    if matches_any_term(normalized, ["location", "where", "sites", "office"]):
         top_locations = list(snapshot["location_counts"].items())[:3]
         if top_locations:
             details = "; ".join(f"{name} ({count})" for name, count in top_locations)
@@ -474,7 +486,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
                 "highlights": [f"{name}: {count}" for name, count in top_locations],
             }
 
-    if any(word in normalized for word in ["type", "laptop", "desktop", "tablet", "printer"]):
+    if matches_any_term(normalized, ["type", "laptop", "desktop", "tablet", "printer"]):
         top_types = list(snapshot["type_counts"].items())[:3]
         if top_types:
             details = "; ".join(f"{name} ({count})" for name, count in top_types)
@@ -483,7 +495,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
                 "highlights": [f"{name}: {count}" for name, count in top_types],
             }
 
-    if any(word in normalized for word in ["vendor", "supplier"]):
+    if matches_any_term(normalized, ["vendor", "supplier"]):
         top_vendors = list(snapshot["vendor_counts"].items())[:3]
         if top_vendors:
             details = "; ".join(f"{name} ({count})" for name, count in top_vendors)
@@ -492,7 +504,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
                 "highlights": [f"{name}: {count}" for name, count in top_vendors],
             }
 
-    if any(word in normalized for word in ["status", "functional", "condemned", "non-functional"]):
+    if matches_any_term(normalized, ["status", "functional", "condemned", "non-functional"]):
         counts = snapshot["status_counts"]
         functional = counts.get("Functional", 0)
         non_functional = counts.get("Non-Functional", 0)
@@ -511,7 +523,7 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
     return {
         "answer": (
             f"I found {snapshot['total_assets']} assets worth {format_currency(snapshot['total_value'])}. "
-            f"Try asking about maintenance, risk, value, locations, vendors, or status for a sharper answer."
+            f"Try asking about maintenance, items needing attention, value, locations, vendors, or status for a sharper answer."
         ),
         "highlights": [
             f"{snapshot['total_assets']} assets",
