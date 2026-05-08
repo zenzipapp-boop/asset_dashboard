@@ -29,7 +29,9 @@ except ImportError:
 from models import Base, Asset, MaintenanceLog
 
 # Database setup
-DATABASE_URL = "sqlite:///./assets.db"
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_PATH = BASE_DIR / "assets.db"
+DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
