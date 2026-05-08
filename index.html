@@ -1533,30 +1533,42 @@
         }
 
         function renderAiSummary(data) {
+            const summary = data && typeof data === 'object' ? data : {};
+            const totalAssets = Number(summary.total_assets ?? 0);
+            const totalValue = Number(summary.total_value ?? 0);
+            const maintenanceCount = Number(summary.maintenance_count ?? 0);
+            const riskCount = Number(summary.risk_count ?? 0);
+            const typeCounts = summary.type_counts && typeof summary.type_counts === 'object' ? summary.type_counts : {};
+            const locationCounts = summary.location_counts && typeof summary.location_counts === 'object' ? summary.location_counts : {};
+            const vendorCounts = summary.vendor_counts && typeof summary.vendor_counts === 'object' ? summary.vendor_counts : {};
+            const maintenanceSpend = Number(summary.total_maintenance_cost ?? 0);
+            const riskyAssets = Array.isArray(summary.risky_assets) ? summary.risky_assets : [];
+            const topAssets = Array.isArray(summary.top_assets) ? summary.top_assets : [];
+
             document.getElementById('aiSummaryCards').innerHTML = `
                 <div class="ai-card">
-                    <div class="ai-card-value">${data.total_assets}</div>
+                    <div class="ai-card-value">${totalAssets}</div>
                     <div class="ai-card-label">Total assets</div>
                 </div>
                 <div class="ai-card">
-                    <div class="ai-card-value">Rs. ${Number(data.total_value || 0).toLocaleString('en-IN')}</div>
+                    <div class="ai-card-value">Rs. ${totalValue.toLocaleString('en-IN')}</div>
                     <div class="ai-card-label">Total asset value</div>
                 </div>
                 <div class="ai-card">
-                    <div class="ai-card-value">${data.maintenance_count}</div>
+                    <div class="ai-card-value">${maintenanceCount}</div>
                     <div class="ai-card-label">Maintenance entries</div>
                 </div>
                 <div class="ai-card">
-                    <div class="ai-card-value">${data.risk_count}</div>
+                    <div class="ai-card-value">${riskCount}</div>
                     <div class="ai-card-label">Risk candidates</div>
                 </div>
             `;
 
             const insightRows = [
-                [`Top type`, Object.entries(data.type_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
-                [`Top location`, Object.entries(data.location_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
-                [`Top vendor`, Object.entries(data.vendor_counts || {}).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
-                [`Maintenance spend`, `Rs. ${Number(data.total_maintenance_cost || 0).toLocaleString('en-IN')}`],
+                [`Top type`, Object.entries(typeCounts).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Top location`, Object.entries(locationCounts).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Top vendor`, Object.entries(vendorCounts).slice(0, 1).map(([name, count]) => `${name} (${count})`).join(', ') || 'None'],
+                [`Maintenance spend`, `Rs. ${maintenanceSpend.toLocaleString('en-IN')}`],
             ];
 
             document.getElementById('aiInsights').innerHTML = insightRows.map(([label, value]) => `
@@ -1566,13 +1578,13 @@
                 </div>
             `).join('');
 
-            const answerText = data.risky_assets && data.risky_assets.length
-                ? `These are the assets most likely to need attention: ${data.risky_assets.slice(0, 3).map(item => `${item.name} (${item.status})`).join('; ')}.`
+            const answerText = riskyAssets.length
+                ? `These are the assets most likely to need attention: ${riskyAssets.slice(0, 3).map(item => `${item.name} (${item.status})`).join('; ')}.`
                 : 'The current dataset does not show many obvious maintenance risk clusters.';
 
             document.getElementById('aiAnswer').innerHTML = `
                 <div class="ai-answer-text">${answerText}</div>
-                <div id="aiHighlights" class="ai-highlights">${(data.top_assets || []).slice(0, 3).map(item => `<span class="ai-pill">${item.name}</span>`).join('')}</div>
+                <div id="aiHighlights" class="ai-highlights">${topAssets.slice(0, 3).map(item => `<span class="ai-pill">${item.name}</span>`).join('')}</div>
             `;
         }
 
@@ -1580,9 +1592,13 @@
             try {
                 const res = await fetch(`${API_URL}/ai/summary`);
                 const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Failed to load AI summary');
+                }
                 renderAiSummary(data);
             } catch (err) {
                 console.error('Error loading AI summary:', err);
+                renderAiSummary({});
                 document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">Unable to load the AI snapshot right now.</div>';
             }
         }
