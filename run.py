@@ -35,6 +35,8 @@ try:
             print("[OK] Already up to date\n")
     else:
         print("[!] Git pull failed (no remote configured?). Continuing anyway...\n")
+except KeyboardInterrupt:
+    print("[!] Update check interrupted. Continuing...\n")
 except Exception as e:
     print(f"[!] Could not check for updates: {e}\n")
 
