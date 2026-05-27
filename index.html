@@ -1209,7 +1209,7 @@
                 <!-- Ollama connected -->
                 <div id="ollamaStatusOk" class="ollama-status-bar ok">
                     <span class="ollama-status-dot"></span>
-                    Ollama is running — AI assistant is ready.
+                    <span class="ollama-status-text">Ollama is running — AI assistant is ready.</span>
                 </div>
 
                 <div class="content">
@@ -1920,10 +1920,13 @@
             const notice = document.getElementById('ollamaNotice');
             const statusOk = document.getElementById('ollamaStatusOk');
             try {
-                const res = await fetch('http://localhost:11434/', { signal: AbortSignal.timeout(2000) });
-                if (res.ok || res.status === 200) {
+                const res = await fetch(`${API_URL}/ai/status`);
+                const data = await res.json();
+                if (data.ollama) {
                     notice.classList.remove('visible');
                     statusOk.style.display = 'flex';
+                    statusOk.querySelector('.ollama-status-text').textContent =
+                        `Ollama is running — model: ${data.model}`;
                     return true;
                 }
             } catch (_) {}
@@ -1962,23 +1965,25 @@
 
         async function submitAiQuestion() {
             const question = document.getElementById('aiQuestion').value.trim();
-            if (!question) {
-                return;
-            }
+            if (!question) return;
 
-            document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">Thinking through the live data...</div>';
+            document.getElementById('aiAnswer').innerHTML = '<div class="ai-answer-text">Asking AI — this may take a few seconds...</div>';
 
             try {
-                if (!latestAiSnapshot) {
-                    await loadAiPage();
-                }
-
-                const data = composeAiAnswer(question, latestAiSnapshot);
-
+                const res = await fetch(`${API_URL}/ai/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question }),
+                });
+                const data = await res.json();
                 const highlights = (data.highlights || []).map(item => `<span class="ai-pill">${item}</span>`).join('');
+                const sourceNote = data.source === 'fallback'
+                    ? '<div style="margin-top:8px;font-size:10px;color:#999;">Ollama not available — answered with local logic</div>'
+                    : '';
                 document.getElementById('aiAnswer').innerHTML = `
-                    <div class="ai-answer-text">${data.answer || 'No AI response available right now.'}</div>
+                    <div class="ai-answer-text">${data.answer || 'No response available right now.'}</div>
                     <div class="ai-highlights">${highlights}</div>
+                    ${sourceNote}
                 `;
             } catch (err) {
                 console.error('Error asking AI:', err);

@@ -167,12 +167,27 @@ The AI tab uses a local [Ollama](https://ollama.com) model to answer questions a
    ```
 3. Ollama starts automatically in the background after install.
 
-Once Ollama is running, open the AI tab and click **Refresh AI**. The amber warning banner will be replaced by a green "Ollama is running" status. You can then ask questions like:
+Once Ollama is running, open the AI tab and click **Refresh AI**. The amber warning banner will be replaced by a green status bar showing the active model name. You can then ask questions like:
 - *Which assets need attention most?*
 - *What is the total asset value?*
 - *Show the latest maintenance activity*
 
-> If you skip this setup, the AI tab will show a warning with these same instructions.
+**Using a different model:**
+
+The default model is `llama3.2`. To use any other model you have pulled in Ollama, set the `OLLAMA_MODEL` environment variable before starting the server:
+
+```bash
+# Windows
+set OLLAMA_MODEL=mistral
+python run.py
+
+# Mac / Linux
+OLLAMA_MODEL=mistral python run.py
+```
+
+If Ollama is not running, the AI tab falls back to built-in rule-based answers automatically — no error is shown.
+
+> If you skip the Ollama setup entirely, the AI tab will show a warning with these same instructions.
 
 ---
 
@@ -206,6 +221,8 @@ Once Ollama is running, open the AI tab and click **Refresh AI**. The amber warn
 | `GET` | `/api/stats` | Dashboard statistics (counts, totals, distributions) |
 | `GET` | `/api/options` | Dropdown option lists (vendors, locations, types) |
 | `POST` | `/api/export-excel` | Generate and download the Excel export |
+| `GET` | `/api/ai/status` | Check if Ollama is reachable; returns active model and available models |
+| `POST` | `/api/ai/query` | Ask a question — answered by Ollama LLM (falls back to rule-based if Ollama is down) |
 
 ### Maintenance
 

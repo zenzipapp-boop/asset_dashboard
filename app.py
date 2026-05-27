@@ -8,6 +8,15 @@ import re
 from pathlib import Path
 from typing import Optional
 
+try:
+    import requests as _requests
+except ImportError:
+    os.system(f"{sys.executable} -m pip install requests -q")
+    import requests as _requests
+
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -406,6 +415,59 @@ def build_ai_snapshot(db: Session):
     }
 
 
+def build_ollama_prompt(question: str, snapshot: dict) -> str:
+    def fmt(v):
+        return f"₹{v:,.0f}" if isinstance(v, (int, float)) else str(v)
+
+    types = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("type_counts", {}).items())[:5]) or "none"
+    locations = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("location_counts", {}).items())[:5]) or "none"
+    vendors = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("vendor_counts", {}).items())[:5]) or "none"
+    status = snapshot.get("status_counts", {})
+    risky = "; ".join(
+        f"{a['name']} ({a['status']}, {a['maintenance_count']} maintenance entries)"
+        for a in snapshot.get("risky_assets", [])[:5]
+    ) or "none"
+    recent = "; ".join(
+        f"{m['asset_name']} — {m['entry_type']} on {m['date']}"
+        for m in snapshot.get("recent_maintenance", [])[:5]
+    ) or "none"
+
+    return f"""You are a concise IT asset management assistant. Answer the question using only the data below. Do not guess or invent figures not present in the data.
+
+--- LIVE ASSET SNAPSHOT ---
+Total assets: {snapshot.get('total_assets', 0)}
+Total value: {fmt(snapshot.get('total_value', 0))}
+Status: {status.get('Functional', 0)} Functional, {status.get('Non-Functional', 0)} Non-Functional, {status.get('Condemned', 0)} Condemned
+Asset types: {types}
+Locations: {locations}
+Vendors: {vendors}
+Risk candidates (Non-Functional / Condemned / 2+ maintenance entries): {snapshot.get('risk_count', 0)}
+High-risk assets: {risky}
+Maintenance entries: {snapshot.get('maintenance_count', 0)}
+Total maintenance spend: {fmt(snapshot.get('total_maintenance_cost', 0))}
+Total scrap value: {fmt(snapshot.get('total_scrap_value', 0))}
+Recent maintenance: {recent}
+--- END SNAPSHOT ---
+
+Question: {question}
+
+Answer in 2-4 sentences. Be specific — cite numbers and asset names from the snapshot above."""
+
+
+def call_ollama(question: str, snapshot: dict) -> str | None:
+    prompt = build_ollama_prompt(question, snapshot)
+    try:
+        resp = _requests.post(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return resp.json().get("response", "").strip()
+    except Exception:
+        return None
+
+
 def compose_ai_answer(question: str, snapshot: dict) -> dict:
     normalized = (question or "").strip().lower()
     risk_definition = "In this app, 'at risk' means an asset is marked Non-Functional or Condemned, or it has 2+ maintenance entries."
@@ -794,12 +856,28 @@ def get_ai_summary(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@app.get("/api/ai/status")
+def ai_status():
+    """Check whether Ollama is reachable and return the configured model."""
+    try:
+        resp = _requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+        models = [m["name"] for m in resp.json().get("models", [])]
+        return {"ollama": True, "model": OLLAMA_MODEL, "available_models": models}
+    except Exception:
+        return {"ollama": False, "model": OLLAMA_MODEL, "available_models": []}
+
+
 @app.post("/api/ai/query")
 def ask_ai(payload: AIQueryRequest, db: Session = Depends(get_db)):
-    """Answer a question using lightweight local logic over the current data."""
+    """Answer a question — tries Ollama first, falls back to rule-based logic."""
     try:
         snapshot = build_ai_snapshot(db)
-        return compose_ai_answer(payload.question, snapshot)
+        llm_answer = call_ollama(payload.question, snapshot)
+        if llm_answer:
+            return {"answer": llm_answer, "highlights": [], "source": "ollama"}
+        fallback = compose_ai_answer(payload.question, snapshot)
+        fallback["source"] = "fallback"
+        return fallback
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
