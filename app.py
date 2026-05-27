@@ -35,6 +35,7 @@ except ImportError:
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
+from sqlalchemy import event
 from models import Base, Asset, MaintenanceLog
 
 # Database setup
@@ -44,6 +45,24 @@ DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Read-only engine for AI queries — Ollama receives only text, but this ensures
+# the DB session used by the AI path physically cannot write anything.
+_ro_engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+@event.listens_for(_ro_engine, "connect")
+def _set_query_only(dbapi_conn, _):
+    dbapi_conn.execute("PRAGMA query_only = ON")
+
+_ROSession = sessionmaker(autocommit=False, autoflush=False, bind=_ro_engine)
+
+
+def get_ro_db():
+    db = _ROSession()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def ensure_asset_columns():
@@ -354,7 +373,29 @@ def build_ai_snapshot(db: Session):
     type_counts = Counter((asset.asset_type or "Unknown") for asset in assets)
     location_counts = Counter((asset.location or "Unknown") for asset in assets)
     vendor_counts = Counter((asset.vendor or "Unknown") for asset in assets)
+    department_counts = Counter((asset.department or "Unknown") for asset in assets)
     maintenance_by_asset = Counter(entry.asset_id for entry in maintenance_entries)
+
+    # Cross-tab: type × department  e.g. {"Desktop": {"IT": 22, "Finance": 10}}
+    type_by_department: dict[str, Counter] = {}
+    for asset in assets:
+        t = asset.asset_type or "Unknown"
+        d = asset.department or "Unknown"
+        type_by_department.setdefault(t, Counter())[d] += 1
+
+    # Cross-tab: type × location
+    type_by_location: dict[str, Counter] = {}
+    for asset in assets:
+        t = asset.asset_type or "Unknown"
+        loc = asset.location or "Unknown"
+        type_by_location.setdefault(t, Counter())[loc] += 1
+
+    # Cross-tab: department × status
+    dept_by_status: dict[str, Counter] = {}
+    for asset in assets:
+        d = asset.department or "Unknown"
+        s = asset.status or "Unknown"
+        dept_by_status.setdefault(d, Counter())[s] += 1
 
     total_value = sum(float(asset.value or 0) for asset in assets)
     total_maintenance_cost = sum(float(entry.cost or 0) for entry in maintenance_entries)
@@ -384,9 +425,13 @@ def build_ai_snapshot(db: Session):
         "total_assets": len(assets),
         "total_value": float(total_value),
         "status_counts": dict(status_counts),
-        "type_counts": dict(type_counts.most_common(8)),
-        "location_counts": dict(location_counts.most_common(8)),
-        "vendor_counts": dict(vendor_counts.most_common(8)),
+        "type_counts": dict(type_counts.most_common(20)),
+        "location_counts": dict(location_counts.most_common(20)),
+        "vendor_counts": dict(vendor_counts.most_common(20)),
+        "department_counts": dict(department_counts.most_common(20)),
+        "type_by_department": {t: dict(c) for t, c in type_by_department.items()},
+        "type_by_location": {t: dict(c) for t, c in type_by_location.items()},
+        "dept_by_status": {d: dict(c) for d, c in dept_by_status.items()},
         "maintenance_count": len(maintenance_entries),
         "total_maintenance_cost": float(total_maintenance_cost),
         "total_scrap_value": float(total_scrap_value),
@@ -417,41 +462,72 @@ def build_ai_snapshot(db: Session):
 
 def build_ollama_prompt(question: str, snapshot: dict) -> str:
     def fmt(v):
-        return f"₹{v:,.0f}" if isinstance(v, (int, float)) else str(v)
+        return f"Rs.{v:,.0f}" if isinstance(v, (int, float)) else str(v)
 
-    types = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("type_counts", {}).items())[:5]) or "none"
-    locations = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("location_counts", {}).items())[:5]) or "none"
-    vendors = ", ".join(f"{k} ({v})" for k, v in list(snapshot.get("vendor_counts", {}).items())[:5]) or "none"
+    def crosstab_lines(mapping: dict) -> str:
+        lines = []
+        for category, counts in sorted(mapping.items()):
+            parts = ", ".join(f"{k} ({v})" for k, v in sorted(counts.items(), key=lambda x: -x[1]))
+            lines.append(f"  {category}: {parts}")
+        return "\n".join(lines) or "  none"
+
     status = snapshot.get("status_counts", {})
-    risky = "; ".join(
-        f"{a['name']} ({a['status']}, {a['maintenance_count']} maintenance entries)"
-        for a in snapshot.get("risky_assets", [])[:5]
-    ) or "none"
-    recent = "; ".join(
-        f"{m['asset_name']} — {m['entry_type']} on {m['date']}"
-        for m in snapshot.get("recent_maintenance", [])[:5]
-    ) or "none"
+    risky = "\n".join(
+        f"  - {a['name']} ({a['status']}, {a['maintenance_count']} maintenance entries)"
+        for a in snapshot.get("risky_assets", [])
+    ) or "  none"
+    recent = "\n".join(
+        f"  - {m['asset_name']}: {m['entry_type']} on {m['date']} by {m['technician']}"
+        for m in snapshot.get("recent_maintenance", [])
+    ) or "  none"
+    dept_status_lines = []
+    for dept, sc in sorted(snapshot.get("dept_by_status", {}).items()):
+        total = sum(sc.values())
+        parts = ", ".join(f"{s} ({c})" for s, c in sorted(sc.items()))
+        dept_status_lines.append(f"  {dept}: {total} total ({parts})")
+    dept_status = "\n".join(dept_status_lines) or "  none"
 
-    return f"""You are a concise IT asset management assistant. Answer the question using only the data below. Do not guess or invent figures not present in the data.
+    type_by_dept = crosstab_lines(snapshot.get('type_by_department', {}))
+    type_by_loc = crosstab_lines(snapshot.get('type_by_location', {}))
+    vendors = ', '.join(f"{k} ({v})" for k, v in snapshot.get('vendor_counts', {}).items()) or 'none'
 
---- LIVE ASSET SNAPSHOT ---
-Total assets: {snapshot.get('total_assets', 0)}
-Total value: {fmt(snapshot.get('total_value', 0))}
-Status: {status.get('Functional', 0)} Functional, {status.get('Non-Functional', 0)} Non-Functional, {status.get('Condemned', 0)} Condemned
-Asset types: {types}
-Locations: {locations}
-Vendors: {vendors}
-Risk candidates (Non-Functional / Condemned / 2+ maintenance entries): {snapshot.get('risk_count', 0)}
-High-risk assets: {risky}
-Maintenance entries: {snapshot.get('maintenance_count', 0)}
-Total maintenance spend: {fmt(snapshot.get('total_maintenance_cost', 0))}
-Total scrap value: {fmt(snapshot.get('total_scrap_value', 0))}
-Recent maintenance: {recent}
---- END SNAPSHOT ---
+    return f"""You are a read-only IT asset management assistant. Answer questions using ONLY the data provided below. Never invent numbers. If the answer is not in the data, say so.
+
+=== ASSET DATABASE SNAPSHOT ===
+
+TOTALS
+  Total assets: {snapshot.get('total_assets', 0)}
+  Total value: {fmt(snapshot.get('total_value', 0))}
+  Status: {status.get('Functional', 0)} Functional, {status.get('Non-Functional', 0)} Non-Functional, {status.get('Condemned', 0)} Condemned
+
+ASSET TYPE BY DEPARTMENT (use this to answer "how many X are in Y department"):
+{type_by_dept}
+
+ASSET TYPE BY LOCATION (use this to answer "how many X are at Y location"):
+{type_by_loc}
+
+DEPARTMENT BREAKDOWN BY STATUS:
+{dept_status}
+
+VENDOR COUNTS:
+  {vendors}
+
+RISK CANDIDATES (Non-Functional / Condemned / 2+ maintenance entries) — {snapshot.get('risk_count', 0)} total:
+{risky}
+
+MAINTENANCE SUMMARY
+  Total entries: {snapshot.get('maintenance_count', 0)}
+  Total spend: {fmt(snapshot.get('total_maintenance_cost', 0))}
+  Total scrap value: {fmt(snapshot.get('total_scrap_value', 0))}
+
+RECENT MAINTENANCE:
+{recent}
+
+=== END OF DATA ===
 
 Question: {question}
 
-Answer in 2-4 sentences. Be specific — cite numbers and asset names from the snapshot above."""
+Answer in 1-4 sentences. Be specific — use numbers and names from the data above. If asked for a count, give the exact number."""
 
 
 def call_ollama(question: str, snapshot: dict) -> str | None:
@@ -868,8 +944,8 @@ def ai_status():
 
 
 @app.post("/api/ai/query")
-def ask_ai(payload: AIQueryRequest, db: Session = Depends(get_db)):
-    """Answer a question — tries Ollama first, falls back to rule-based logic."""
+def ask_ai(payload: AIQueryRequest, db: Session = Depends(get_ro_db)):
+    """Answer a question — read-only DB session; tries Ollama first, falls back to rule-based logic."""
     try:
         snapshot = build_ai_snapshot(db)
         llm_answer = call_ollama(payload.question, snapshot)
