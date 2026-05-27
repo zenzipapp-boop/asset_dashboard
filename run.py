@@ -51,6 +51,28 @@ print("\n[OK] Starting FastAPI server on http://localhost:8000\n")
 print("Web UI will open automatically in your browser...")
 print("API docs available at: http://localhost:8000/docs\n")
 
+# Check if Ollama is reachable for the AI tab
+import urllib.request
+_ollama_ok = False
+try:
+    urllib.request.urlopen("http://localhost:11434", timeout=2)
+    _ollama_ok = True
+except Exception:
+    pass
+
+if not _ollama_ok:
+    print("─" * 60)
+    print("  AI ASSISTANT — SETUP REQUIRED")
+    print("─" * 60)
+    print("  Ollama is not running. The AI tab needs it to work.")
+    print()
+    print("  1. Download Ollama: https://ollama.com")
+    print("  2. Pull the model:  ollama pull llama3.2")
+    print("  3. Ollama starts automatically after install.")
+    print("─" * 60 + "\n")
+else:
+    print("[OK] Ollama detected — AI assistant is ready\n")
+
 # Wait a moment and open browser
 def open_browser():
     time.sleep(2)

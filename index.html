@@ -677,6 +677,78 @@
             color: #333;
         }
 
+        /* ─── OLLAMA SETUP NOTICE ────────────────────────────────────── */
+        .ollama-notice {
+            margin: 14px 18px 0;
+            border-radius: 10px;
+            border: 1.5px solid #e2c97e;
+            background: #fffbee;
+            padding: 14px 16px;
+            display: none;
+        }
+
+        .ollama-notice.visible {
+            display: block;
+        }
+
+        .ollama-notice-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #7a5800;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ollama-notice-body {
+            font-size: 12px;
+            color: #5a4200;
+            line-height: 1.6;
+        }
+
+        .ollama-notice-steps {
+            margin: 8px 0 0 0;
+            padding-left: 16px;
+        }
+
+        .ollama-notice-steps li {
+            margin-bottom: 4px;
+        }
+
+        .ollama-notice code {
+            background: #f5e9b8;
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .ollama-status-bar {
+            margin: 14px 18px 0;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ollama-status-bar.ok {
+            display: flex;
+            background: #edfaf3;
+            border: 1.5px solid #7ec8a0;
+            color: #1a6639;
+        }
+
+        .ollama-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+            flex-shrink: 0;
+        }
+
         /* ─── RESPONSIVE ──────────────────────────────────────────────── */
         @media (max-width: 768px) {
             .sidebar {
@@ -1120,6 +1192,26 @@
                         <button class="btn btn-primary btn-small" onclick="loadAiPage()">Refresh AI</button>
                     </div>
                 </div>
+
+                <!-- Ollama not running -->
+                <div id="ollamaNotice" class="ollama-notice">
+                    <div class="ollama-notice-title">⚠ Ollama not detected — setup required</div>
+                    <div class="ollama-notice-body">
+                        The AI assistant needs <strong>Ollama</strong> running locally to answer questions. Follow these steps once:
+                        <ol class="ollama-notice-steps">
+                            <li>Download and install Ollama from <strong>ollama.com</strong></li>
+                            <li>Open a terminal and run: <code>ollama pull llama3.2</code></li>
+                            <li>Ollama starts automatically — then click <strong>Refresh AI</strong> above.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Ollama connected -->
+                <div id="ollamaStatusOk" class="ollama-status-bar ok">
+                    <span class="ollama-status-dot"></span>
+                    Ollama is running — AI assistant is ready.
+                </div>
+
                 <div class="content">
                     <div class="ai-layout">
                         <div class="ai-panel ai-chatbox">
@@ -1824,7 +1916,24 @@
             `;
         }
 
+        async function checkOllamaStatus() {
+            const notice = document.getElementById('ollamaNotice');
+            const statusOk = document.getElementById('ollamaStatusOk');
+            try {
+                const res = await fetch('http://localhost:11434/', { signal: AbortSignal.timeout(2000) });
+                if (res.ok || res.status === 200) {
+                    notice.classList.remove('visible');
+                    statusOk.style.display = 'flex';
+                    return true;
+                }
+            } catch (_) {}
+            notice.classList.add('visible');
+            statusOk.style.display = 'none';
+            return false;
+        }
+
         async function loadAiPage() {
+            checkOllamaStatus();
             try {
                 const [statsRes, assetsRes, maintenanceRes] = await Promise.all([
                     fetch(`${API_URL}/stats`),

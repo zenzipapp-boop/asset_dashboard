@@ -12,6 +12,7 @@ A web-based IT asset management and audit system built with FastAPI (Python) and
 - **Maintenance Log** — Track repairs, inspections, and servicing per asset
 - **Excel Export** — Download all assets as a formatted `.xlsx` spreadsheet
 - **GST Support** — Auto-calculates CGST/SGST (intra-state) or IGST (inter-state)
+- **AI Assistant** — Ask questions about your assets in plain English, powered by a local Ollama model
 
 ---
 
@@ -49,6 +50,7 @@ A web-based IT asset management and audit system built with FastAPI (Python) and
 - **Python 3.8 or higher** — [Download](https://www.python.org/downloads/)
 - **pip** — Included with Python 3.4+
 - A modern web browser (Chrome, Firefox, Edge)
+- **Ollama** *(required for the AI Assistant tab)* — [Download](https://ollama.com)
 
 Verify your Python version:
 ```bash
@@ -152,6 +154,25 @@ FastAPI generates interactive API docs automatically:
 1. Navigate to the **Maintenance** tab.
 2. Create entries for repairs, inspections, or scheduled servicing.
 3. Each entry links to an asset and tracks date, technician, cost, and status.
+
+### AI Assistant
+The AI tab uses a local [Ollama](https://ollama.com) model to answer questions about your assets in plain English. It runs entirely on your machine — no data leaves your network.
+
+**One-time setup (do this before using the AI tab):**
+
+1. Download and install Ollama from **https://ollama.com**
+2. Open a terminal and pull the model:
+   ```bash
+   ollama pull llama3.2
+   ```
+3. Ollama starts automatically in the background after install.
+
+Once Ollama is running, open the AI tab and click **Refresh AI**. The amber warning banner will be replaced by a green "Ollama is running" status. You can then ask questions like:
+- *Which assets need attention most?*
+- *What is the total asset value?*
+- *Show the latest maintenance activity*
+
+> If you skip this setup, the AI tab will show a warning with these same instructions.
 
 ---
 
@@ -269,3 +290,13 @@ Try upgrading pip first:
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+**AI tab shows "Ollama not detected" warning:**
+Ollama is not running or not installed. Follow the [AI Assistant setup](#ai-assistant) steps above. After installing and pulling the model, click **Refresh AI** in the app — the warning will clear automatically.
+
+**Ollama is installed but the AI tab still shows the warning:**
+Ollama may not have started yet. Open a terminal and run:
+```bash
+ollama serve
+```
+Then click **Refresh AI** in the app.
