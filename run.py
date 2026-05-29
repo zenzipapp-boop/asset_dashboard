@@ -42,7 +42,10 @@ except Exception as e:
 
 # Install dependencies
 print("[*] Installing dependencies...")
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"])
+try:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"])
+except KeyboardInterrupt:
+    print("[!] Dependency install interrupted. Continuing anyway...\n")
 
 # Check database exists
 if not DATABASE_PATH.exists():
