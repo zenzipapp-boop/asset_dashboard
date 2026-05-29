@@ -1616,7 +1616,7 @@
             `;
 
             // initialize from hidden field if present (but preserve existing in-memory serials)
-            const fromHidden = (hiddenField.value || '').split(/\r?\n/).filter(Boolean);
+            const fromHidden = (hiddenField.value || '').split(/[\r\n,]+/).map(s => s.trim()).filter(s => s && s.toUpperCase() !== 'NA');
             if (fromHidden.length) serialNumbers = fromHidden.slice(0, requiredCount);
             updateSerialListDisplay();
 
@@ -1680,7 +1680,7 @@
                 `).join('') : '<div style="color:#888;">No serials entered</div>';
             }
             document.getElementById('serialsHelper').textContent = `${serialNumbers.length} / ${quantity} entered`;
-            document.getElementById('serialNumbersValue').value = serialNumbers.join('\n');
+            document.getElementById('serialNumbersValue').value = siNotApplicable ? 'NA' : serialNumbers.join(', ');
         }
 
         function toggleExtraMonitorSi() {
@@ -1692,10 +1692,6 @@
                 serialNumbers = serialNumbers.slice(0, requiredCount);
             }
 
-            if (siNotApplicable) {
-                serialNumbers = Array(requiredCount).fill('NA');
-            }
-
             const input = document.getElementById('serialNumberInputMain');
             if (input) input.disabled = siNotApplicable || (serialNumbers.length >= requiredCount);
 
@@ -1704,14 +1700,11 @@
         }
 
         function toggleSiNotApplicable() {
-            const qty = getRequiredSerialCount();
             siNotApplicable = document.getElementById('siNotApplicableToggle').checked;
             if (siNotApplicable) {
-                serialNumbers = Array(qty).fill('NA');
+                serialNumbers = [];
                 document.getElementById('serialNumberInputMain').disabled = true;
             } else {
-                // clear NA entries so user can enter actual serials
-                serialNumbers = [];
                 document.getElementById('serialNumberInputMain').disabled = false;
             }
             syncSerialNumbers();
@@ -1723,7 +1716,7 @@
         }
 
         function syncSerialNumbers() {
-            document.getElementById('serialNumbersValue').value = serialNumbers.join('\n');
+            document.getElementById('serialNumbersValue').value = siNotApplicable ? 'NA' : serialNumbers.join(', ');
         }
 
         function calculateTotalValue() {

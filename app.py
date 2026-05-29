@@ -297,6 +297,13 @@ def serve_frontend():
     return FileResponse("index.html")
 
 
+def normalize_si_no(value: str) -> str:
+    parts = [p.strip() for p in re.split(r'[\n,]+', value or '') if p.strip()]
+    if not parts or all(p.upper() == 'NA' for p in parts):
+        return 'NA'
+    return ', '.join(parts)
+
+
 def build_age(dop: str, end_date: Optional[str] = None) -> str:
     try:
         start = datetime.strptime(dop, "%d/%m/%Y")
@@ -774,7 +781,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
             asset_name=asset.asset_name,
             dop=asset.dop,
             quantity=quantity,
-            si_no=asset.si_no,
+            si_no=normalize_si_no(asset.si_no),
             age=age,
             disposed=asset.disposed,
             disposal_date=disposal_date,
@@ -842,6 +849,9 @@ def update_asset(asset_id: int, asset_update: AssetUpdate, db: Session = Depends
                     "igst_amount": gst_bits["igst_amount"],
                     "value": float(base_price or 0) + gst_bits["gst_amount"],
                 })
+
+        if 'si_no' in update_data:
+            update_data['si_no'] = normalize_si_no(update_data['si_no'])
 
         for field, value in update_data.items():
             setattr(db_asset, field, value)
