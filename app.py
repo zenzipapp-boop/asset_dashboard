@@ -679,10 +679,15 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
     }
 
 
+from sqlalchemy import text as sa_text
+
+# dop is stored as DD/MM/YYYY — reorder to YYYYMMDD so string sort == date sort
+_dop_sort = sa_text("substr(dop,7,4)||substr(dop,4,2)||substr(dop,1,2)")
+
 SORTABLE_COLS = {
     "sl_no": Asset.sl_no,
     "asset_name": Asset.asset_name,
-    "dop": Asset.dop,
+    "dop": _dop_sort,
     "asset_type": Asset.asset_type,
     "status": Asset.status,
     "value": Asset.value,
