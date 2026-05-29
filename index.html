@@ -1540,6 +1540,12 @@
                 if (search) url += `&search=${encodeURIComponent(search)}`;
 
                 const res = await fetch(url);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    if (reset) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#c00;">Failed to load assets${err.detail ? ': ' + err.detail : ''}.</td></tr>`;
+                    document.getElementById('pageInfo').textContent = 'Error';
+                    return;
+                }
                 const data = await res.json();
                 assetsTotal = data.total;
 

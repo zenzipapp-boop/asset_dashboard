@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, cast, Integer
 from sqlalchemy.orm import sessionmaker, Session
 
 # Auto-install dependencies
@@ -679,10 +679,17 @@ def compose_ai_answer(question: str, snapshot: dict) -> dict:
     }
 
 
-from sqlalchemy import literal_column
+def _build_dop_sort():
+    # Handles both DD/MM/YYYY and D/M/YYYY by locating slashes dynamically
+    p1 = func.instr(Asset.dop, '/')
+    rest = func.substr(Asset.dop, p1 + 1)
+    p2 = func.instr(rest, '/')
+    year = cast(func.substr(Asset.dop, p1 + p2 + 1), Integer)
+    month = cast(func.substr(Asset.dop, p1 + 1, p2 - 1), Integer)
+    day = cast(func.substr(Asset.dop, 1, p1 - 1), Integer)
+    return func.coalesce(year * 10000 + month * 100 + day, 0)
 
-# dop is stored as DD/MM/YYYY — reorder to YYYYMMDD so string sort == date sort
-_dop_sort = literal_column("substr(dop,7,4)||substr(dop,4,2)||substr(dop,1,2)")
+_dop_sort = _build_dop_sort()
 
 SORTABLE_COLS = {
     "sl_no": Asset.sl_no,
