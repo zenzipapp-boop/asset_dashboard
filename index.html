@@ -1386,10 +1386,15 @@
         }
 
         function makeMultiSerialRows(asset) {
-            const serials = asset.si_no.split(',').map(s => s.trim()).filter(Boolean);
-            const qty = asset.quantity || serials.length;
+            const realSerials = (asset.si_no || '').split(',').map(s => s.trim()).filter(s => s && s.toUpperCase() !== 'NA');
+            const qty = asset.quantity || Math.max(realSerials.length, 1);
+            const hasSerials = realSerials.length > 0;
+            const rows = hasSerials ? realSerials : Array.from({length: qty}, () => 'NA');
             const perUnit = qty > 0 && asset.value ? asset.value / qty : asset.value;
             const groupId = 'msi-' + asset.id;
+            const headerLabel = hasSerials
+                ? `${rows.length} serial${rows.length > 1 ? 's' : ''}`
+                : `${qty} unit${qty > 1 ? 's' : ''} · no serial`;
 
             const headerTr = document.createElement('tr');
             headerTr.style.background = '#f4f7fb';
@@ -1400,7 +1405,7 @@
                 </td>
                 <td>${asset.asset_name}</td>
                 <td>${asset.dop || '—'}</td>
-                <td style="color:#888; font-size:11px;">${serials.length} serial${serials.length > 1 ? 's' : ''}</td>
+                <td style="color:#888; font-size:11px;">${headerLabel}</td>
                 <td>${asset.asset_type}</td>
                 <td><span class="badge badge-${asset.status.toLowerCase().replace(/ /g, '-')}">${asset.status}</span></td>
                 <td>${asset.vendor || '—'}</td>
@@ -1412,7 +1417,7 @@
                 </td>
             `;
 
-            const childRows = serials.map((serial, i) => {
+            const childRows = rows.map((serial, i) => {
                 const tr = document.createElement('tr');
                 tr.style.display = 'none';
                 tr.dataset.parentGroup = groupId;
@@ -1421,7 +1426,7 @@
                     <td style="color:#bbb; font-size:10px; text-align:center;">${asset.sl_no}.${i + 1}</td>
                     <td style="padding-left:24px; color:#555; font-size:12px;">${asset.asset_name}</td>
                     <td></td>
-                    <td style="font-family:monospace; font-size:12px;">${serial}</td>
+                    <td style="font-family:monospace; font-size:12px; color:${serial === 'NA' ? '#aaa' : 'inherit'};">${serial}</td>
                     <td style="font-size:12px; color:#888;">${asset.asset_type}</td>
                     <td></td>
                     <td></td>
