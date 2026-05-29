@@ -297,6 +297,16 @@ def serve_frontend():
     return FileResponse("index.html")
 
 
+def normalize_dop(dop: str) -> str:
+    if not dop:
+        return dop
+    parts = dop.strip().split('/')
+    if len(parts) != 3:
+        return dop
+    d, m, y = parts
+    return f"{d.zfill(2)}/{m.zfill(2)}/{y}"
+
+
 def normalize_si_no(value: str) -> str:
     parts = [p.strip() for p in re.split(r'[\n,]+', value or '') if p.strip()]
     if not parts or all(p.upper() == 'NA' for p in parts):
@@ -791,7 +801,7 @@ def create_asset(asset: AssetCreate, db: Session = Depends(get_db)):
         db_asset = Asset(
             sl_no=new_sl_no,
             asset_name=asset.asset_name,
-            dop=asset.dop,
+            dop=normalize_dop(asset.dop),
             quantity=quantity,
             si_no=normalize_si_no(asset.si_no),
             age=age,
@@ -864,6 +874,8 @@ def update_asset(asset_id: int, asset_update: AssetUpdate, db: Session = Depends
 
         if 'si_no' in update_data:
             update_data['si_no'] = normalize_si_no(update_data['si_no'])
+        if 'dop' in update_data:
+            update_data['dop'] = normalize_dop(update_data['dop'])
 
         for field, value in update_data.items():
             setattr(db_asset, field, value)
