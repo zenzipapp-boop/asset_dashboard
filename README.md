@@ -12,7 +12,7 @@ A web-based IT asset management and audit system built with FastAPI (Python) and
 - **Maintenance Log** — Track repairs, inspections, and servicing per asset
 - **Excel Export** — Download all assets as a formatted `.xlsx` spreadsheet
 - **GST Support** — Auto-calculates CGST/SGST (intra-state) or IGST (inter-state)
-- **AI Assistant** — Ask questions about your assets in plain English, powered by a local Ollama model
+- **AI Assistant** — Ask questions about your assets in plain English
 
 ---
 
@@ -50,7 +50,6 @@ A web-based IT asset management and audit system built with FastAPI (Python) and
 - **Python 3.8 or higher** — [Download](https://www.python.org/downloads/)
 - **pip** — Included with Python 3.4+
 - A modern web browser (Chrome, Firefox, Edge)
-- **Ollama** *(required for the AI Assistant tab)* — [Download](https://ollama.com)
 
 Verify your Python version:
 ```bash
@@ -156,38 +155,10 @@ FastAPI generates interactive API docs automatically:
 3. Each entry links to an asset and tracks date, technician, cost, and status.
 
 ### AI Assistant
-The AI tab uses a local [Ollama](https://ollama.com) model to answer questions about your assets in plain English. It runs entirely on your machine — no data leaves your network.
-
-**One-time setup (do this before using the AI tab):**
-
-1. Download and install Ollama from **https://ollama.com**
-2. Open a terminal and pull the model:
-   ```bash
-   ollama pull llama3.2
-   ```
-3. Ollama starts automatically in the background after install.
-
-Once Ollama is running, open the AI tab and click **Refresh AI**. The amber warning banner will be replaced by a green status bar showing the active model name. You can then ask questions like:
+The AI tab answers questions about your assets in plain English using built-in rule-based logic. Ask things like:
 - *Which assets need attention most?*
 - *What is the total asset value?*
 - *Show the latest maintenance activity*
-
-**Using a different model:**
-
-The default model is `llama3.2`. To use any other model you have pulled in Ollama, set the `OLLAMA_MODEL` environment variable before starting the server:
-
-```bash
-# Windows
-set OLLAMA_MODEL=mistral
-python run.py
-
-# Mac / Linux
-OLLAMA_MODEL=mistral python run.py
-```
-
-If Ollama is not running, the AI tab falls back to built-in rule-based answers automatically — no error is shown.
-
-> If you skip the Ollama setup entirely, the AI tab will show a warning with these same instructions.
 
 ---
 
@@ -221,8 +192,8 @@ If Ollama is not running, the AI tab falls back to built-in rule-based answers a
 | `GET` | `/api/stats` | Dashboard statistics (counts, totals, distributions) |
 | `GET` | `/api/options` | Dropdown option lists (vendors, locations, types) |
 | `POST` | `/api/export-excel` | Generate and download the Excel export |
-| `GET` | `/api/ai/status` | Check if Ollama is reachable; returns active model and available models |
-| `POST` | `/api/ai/query` | Ask a question — answered by Ollama LLM (falls back to rule-based if Ollama is down) |
+| `GET` | `/api/ai/status` | Check AI status |
+| `POST` | `/api/ai/query` | Ask a question about your assets |
 
 ### Maintenance
 
@@ -307,13 +278,3 @@ Try upgrading pip first:
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
-**AI tab shows "Ollama not detected" warning:**
-Ollama is not running or not installed. Follow the [AI Assistant setup](#ai-assistant) steps above. After installing and pulling the model, click **Refresh AI** in the app — the warning will clear automatically.
-
-**Ollama is installed but the AI tab still shows the warning:**
-Ollama may not have started yet. Open a terminal and run:
-```bash
-ollama serve
-```
-Then click **Refresh AI** in the app.
