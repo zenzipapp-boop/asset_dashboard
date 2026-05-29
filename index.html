@@ -1574,7 +1574,7 @@
                             grouped.row.dataset.groupId = grouped.groupId;
                             item.items.forEach(asset => {
                                 const serials = (asset.si_no || '').split(',').map(s => s.trim()).filter(s => s && s.toUpperCase() !== 'NA');
-                                if (serials.length > 1) {
+                                if (serials.length > 1 || (asset.quantity > 1 && serials.length === 0)) {
                                     makeMultiSerialRows(asset).forEach(r => tbody.appendChild(r));
                                 } else {
                                     const detailRow = makeAssetRow(asset);
