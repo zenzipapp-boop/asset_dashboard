@@ -11,8 +11,8 @@ A web-based IT asset management and audit system built with FastAPI (Python) and
 - **Asset Registry** — Searchable, filterable table with inline edit and delete
 - **Maintenance Log** — Track repairs, inspections, and servicing per asset
 - **Excel Export** — Download all assets as a formatted `.xlsx` spreadsheet
-- **GST Support** — Auto-calculates CGST/SGST (intra-state) or IGST (inter-state)
-- **AI Assistant** — Ask questions about your assets in plain English
+- **GST/VAT Support** — Auto-calculates CGST/SGST (intra-state) or IGST (inter-state)
+  
 
 ---
 
